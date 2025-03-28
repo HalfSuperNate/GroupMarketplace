@@ -100,3 +100,58 @@
     flex-direction: column;
   }
 }
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.input {
+  padding: 10px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  margin-top: 5px;
+}
+
+.button {
+  background: #7b3fe4;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.button:hover {
+  background: #5a2bb5;
+}
+
+.button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.connectButton {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.warning {
+  color: red;
+  font-weight: bold;
+  text-align: center;
+  margin-top: 20px;
+}

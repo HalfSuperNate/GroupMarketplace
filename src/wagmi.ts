@@ -3,30 +3,32 @@ import { http, createConfig } from '@wagmi/core'
 import {
   //arbitrum,
   //base,
-  mainnet,
+  //mainnet,
   //optimism,
-  polygon,
-  sepolia,
+  //polygon,
+  //sepolia,
+  polygonAmoy,
 } from 'wagmi/chains';
 
 export const config = getDefaultConfig({
   appName: 'GroupMarketplace',
   projectId: 'c0ad75559dfc6a5e76a0d1094c7c4b03',
   chains: [
-    mainnet,
-    polygon,
+    //mainnet,
+    //polygon,
     //optimism,
     //arbitrum,
     //base,
-    ...(process.env.NEXT_PUBLIC_ENABLE_TESTNETS === 'true' ? [sepolia] : []),
+    polygonAmoy,
+    ...(process.env.NEXT_PUBLIC_ENABLE_TESTNETS === 'true' ? [polygonAmoy] : []),
   ],
   ssr: true,
 });
 
-export const configB = createConfig({
-  chains: [mainnet, sepolia],
-  transports: {
-    [mainnet.id]: http(),
-    [sepolia.id]: http(),
-  },
-})
+// export const configB = createConfig({
+//   chains: [mainnet, sepolia],
+//   transports: {
+//     [mainnet.id]: http(),
+//     [sepolia.id]: http(),
+//   },
+// })

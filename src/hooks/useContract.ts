@@ -1,207 +1,204 @@
 import { useState } from "react";
-import { parseEther } from "viem"; // Viem helper for ether conversion
+import { parseEther } from "viem"; 
 import { useWriteContract, useWaitForTransactionReceipt, useAccount } from "wagmi";
-import { toaster } from "../components/ui/toaster"
-import contractABI from '../contracts/GroupMarketplace.json';
+import { toaster } from "../components/ui/toaster";
+import contractABI from "../contracts/GroupMarketplace.json";
 
-const CONTRACT_ADDRESS = `0x${"70261103D4dBC11A178F71475D2824Ad1a9d6972"}`;
+const CONTRACT_ADDRESS = `0x70261103D4dBC11A178F71475D2824Ad1a9d6972`;
+export const NATIVE_TOKEN = "POL";
 
 export const useContract = () => {
   const { address } = useAccount();
   const [loading, setLoading] = useState(false);
-  const [txHash, setTxHash] = useState<string | null>(null); // Store transaction hash
+  const [txHash, setTxHash] = useState<string | null>(null);
 
-  // ✅ Toast function
-  const showToast = (description: string, type: "success" | "error" | "info" | "warning") => {
-    toaster.create({
-      description,
-      type,
-      duration: 4000,
-      dismissible: true,
-    });
-  };
-
-  // ✅ Wagmi hooks
   const { writeContract } = useWriteContract();
   const { isLoading, isSuccess, isError } = useWaitForTransactionReceipt({
     hash: txHash as `0x${string}`,
   });
 
-  // 🛠️ Handle Transaction Execution
+  // ✅ Toast helper
+  const showToast = (
+    description: string,
+    type: "success" | "error" | "info" | "warning"
+  ) => {
+    toaster.create({
+      description,
+      type,
+      duration: 4000,
+      closable: true,
+    });
+  };
+
+  // ✅ Unified transaction handler
   const handleTransaction = async (
-    callback: () => void, // Execute the synchronous contract write
+    contractCall: () => Promise<any>,
     successMessage: string,
     errorMessage: string
   ) => {
     try {
       setLoading(true);
-      callback(); // Execute the contract interaction synchronously
-      showToast("Transaction sent. Waiting for confirmation...", "info");
-    } catch (error: any) {
-      console.error(error);
-      showToast(errorMessage || `Error: ${error.message}`, "error");
-      setLoading(false);
-    }
-  };
 
-  // ✅ Handle Transaction Confirmation
-  const checkTransactionStatus = () => {
-    if (isSuccess) {
-      showToast("Transaction confirmed!", "success");
-      setLoading(false);
-    } else if (isError) {
-      showToast("Transaction failed.", "error");
-      setLoading(false);
-    }
-  };
+      const result = await contractCall(); // Execute contract call
+      if (result && result.hash) {
+        setTxHash(result.hash); // Store the transaction hash immediately
+        showToast("Transaction sent. Waiting for confirmation...", "info");
 
-  // ✅ Helper function to extract the latest transaction hash
-  const fetchTransactionHash = async () => {
-    const provider = window.ethereum; 
-    if (provider && address) {
-      const txs = await provider.request({
-        method: "eth_getBlockByNumber",
-        params: ["latest", true],
-      });
-
-      if (txs?.transactions?.length > 0) {
-        const latestTx = txs.transactions.find((tx: any) => tx.from === address);
-        if (latestTx) {
-          setTxHash(latestTx.hash); 
+        // Wait for confirmation
+        const receipt = await result.wait();
+        if (receipt?.status === "success") {
+          showToast(successMessage, "success");
+        } else {
+          showToast("Transaction failed.", "error");
         }
       }
+    } catch (error: any) {
+      console.error("Transaction error:", error);
+      showToast(errorMessage || `Error: ${error.message}`, "error");
+    } finally {
+      setLoading(false);
     }
   };
 
-  // ✅ Set Metadata
+  // ✅ Contract Actions
+
+  // Set Metadata
   const setMetadata = async (
     group: string,
     batchSize: number,
-    name: string,
-    image: string,
-    price: string
+    startingNumber: number,
+    groupURI: string,
+    appendNumberToGroupURI: number,
+    groupURIext: string,
+    metadata: {
+      name: string;
+      description: string;
+      externalUrl: string;
+      image: string;
+      animationUrl: string;
+      youtubeUrl: string;
+      backgroundColor: string;
+      attributes: string;
+      creator: string;
+      locked: boolean;
+      price: string;
+    },
+    appendNumber: boolean,
+    appendNumberToImage: boolean,
+    imageExtension: string,
+    appendNumberToAnim: boolean,
+    animExtension: string
   ) => {
-    const priceInWei = parseEther(price);
-
-    await handleTransaction(
-      () => {
-        writeContract({
-          abi: contractABI,
-          address: CONTRACT_ADDRESS,
-          functionName: "setMetadata",
-          args: [
-            {
-              group,
-              batchSize,
-              name,
-              image,
-              price: priceInWei,
-              appendNumber: false,
-              appendNumberToImage: false,
-              appendNumberToAnim: false,
-              imageExtension: "",
-              animExtension: "",
-              startingNumber: 1,
-              externalUrl: "",
-              youtubeUrl: "",
-              animationUrl: "",
-              backgroundColor: "",
-              attributes: [],
-            },
-          ],
-          value: priceInWei,
-        });
-      },
-      "Metadata set successfully!",
-      "Failed to set metadata"
-    );
-
-    // Manually fetch the transaction hash
-    await fetchTransactionHash();
+    try {
+      const priceInWei = parseEther(metadata.price);
+  
+      await handleTransaction(
+        async () =>
+          await writeContract({
+            abi: contractABI,
+            address: CONTRACT_ADDRESS,
+            functionName: "setMetadata",
+            args: [
+              group,                         // string group
+              batchSize,                      // uint256 batchSize
+              startingNumber,                 // uint256 startingNumber
+              groupURI,                       // string groupURI
+              appendNumberToGroupURI,         // uint8 appendNumberToGroupURI
+              groupURIext,                    // string groupURIext
+              [
+                metadata.name,                // string name
+                metadata.description,         // string description
+                metadata.externalUrl,         // string externalUrl
+                metadata.image,               // string image
+                metadata.animationUrl,        // string animationUrl
+                metadata.youtubeUrl,          // string youtubeUrl
+                metadata.backgroundColor,     // string backgroundColor
+                metadata.attributes,          // string attributes (encoded JSON string)
+                metadata.creator,             // address creator
+                metadata.locked,              // bool locked
+                priceInWei                    // uint256 price
+              ],
+              appendNumber,                   // bool appendNumber
+              appendNumberToImage,            // bool appendNumberToImage
+              imageExtension,                 // string imageExtension
+              appendNumberToAnim,             // bool appendNumberToAnim
+              animExtension                   // string animExtension
+            ],
+            value: parseEther("0.001"),
+          }),
+        "Metadata set successfully!",
+        "Failed to set metadata"
+      );
+    } catch (error) {
+      console.error("Error setting metadata:", error);
+    }
   };
 
-  // ✅ Mint Token
+  // Mint Token
   const mintToken = async (tokenId: number, price: string) => {
     const priceInWei = parseEther(price);
 
     await handleTransaction(
-      () => {
-        writeContract({
+      async () =>
+        await writeContract({
           abi: contractABI,
           address: CONTRACT_ADDRESS,
           functionName: "mint",
           args: [tokenId],
           value: priceInWei,
-        });
-      },
+        }),
       "Token minted successfully!",
       "Failed to mint token"
     );
-
-    await fetchTransactionHash();
   };
 
-  // ✅ Buy Token
+  // Buy Token
   const buyToken = async (tokenId: number, price: string) => {
     const priceInWei = parseEther(price);
 
     await handleTransaction(
-      () => {
-        writeContract({
+      async () =>
+        await writeContract({
           abi: contractABI,
           address: CONTRACT_ADDRESS,
           functionName: "buyToken",
           args: [tokenId],
           value: priceInWei,
-        });
-      },
+        }),
       "Token purchased successfully!",
       "Failed to buy token"
     );
-
-    await fetchTransactionHash();
   };
 
-  // ✅ Cancel Listing
+  // Cancel Listing
   const cancelListing = async (tokenId: number) => {
     await handleTransaction(
-      () => {
-        writeContract({
+      async () =>
+        await writeContract({
           abi: contractABI,
           address: CONTRACT_ADDRESS,
           functionName: "cancelListing",
           args: [tokenId],
-        });
-      },
+        }),
       "Listing canceled successfully!",
       "Failed to cancel listing"
     );
-
-    await fetchTransactionHash();
   };
 
-  // ✅ Move Token to Group
+  // Move Token to Group
   const moveTokenToGroup = async (tokenId: number, newGroup: string) => {
     await handleTransaction(
-      () => {
-        writeContract({
+      async () =>
+        await writeContract({
           abi: contractABI,
           address: CONTRACT_ADDRESS,
           functionName: "moveTokenToGroup",
           args: [tokenId, newGroup],
-        });
-      },
+        }),
       "Token moved to new group successfully!",
       "Failed to move token to group"
     );
-
-    await fetchTransactionHash();
   };
-
-  // Check transaction status on changes
-  if (txHash) {
-    checkTransactionStatus();
-  }
 
   return {
     loading: loading || isLoading,
