@@ -9,7 +9,7 @@ const BuyToken = () => {
   
     const handleBuy = async () => {
       if (!tokenId || !price) return;
-      await buyToken(tokenId, price);
+      await buyToken(tokenId, BigInt(price));
     };
   
     return (

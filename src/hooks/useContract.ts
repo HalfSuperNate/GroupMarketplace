@@ -4,7 +4,7 @@ import { useWriteContract, useWaitForTransactionReceipt, useAccount } from "wagm
 import { toaster } from "../components/ui/toaster";
 import contractABI from "../contracts/GroupMarketplace.json";
 
-const CONTRACT_ADDRESS = `0x70261103D4dBC11A178F71475D2824Ad1a9d6972`;
+const CONTRACT_ADDRESS = `0x0100a530469DB0Dd44c9Af210A465883668C7797`;
 export const NATIVE_TOKEN = "POL";
 
 export const useContract = () => {
@@ -90,7 +90,6 @@ export const useContract = () => {
     animExtension: string
   ) => {
     try {
-      const priceInWei = parseEther(metadata.price);
   
       await handleTransaction(
         async () =>
@@ -116,7 +115,7 @@ export const useContract = () => {
                 metadata.attributes,          // string attributes (encoded JSON string)
                 metadata.creator,             // address creator
                 metadata.locked,              // bool locked
-                priceInWei                    // uint256 price
+                BigInt(metadata.price)        // uint256 price in wei
               ],
               appendNumber,                   // bool appendNumber
               appendNumberToImage,            // bool appendNumberToImage
@@ -124,7 +123,7 @@ export const useContract = () => {
               appendNumberToAnim,             // bool appendNumberToAnim
               animExtension                   // string animExtension
             ],
-            value: parseEther("0.001"),
+            value: parseEther(((0.00005 * batchSize) + 0.0005).toString()),
           }),
         "Metadata set successfully!",
         "Failed to set metadata"
@@ -135,8 +134,7 @@ export const useContract = () => {
   };
 
   // Mint Token
-  const mintToken = async (tokenId: number, price: string) => {
-    const priceInWei = parseEther(price);
+  const mintToken = async (tokenId: number, price: bigint) => {
 
     await handleTransaction(
       async () =>
@@ -145,7 +143,7 @@ export const useContract = () => {
           address: CONTRACT_ADDRESS,
           functionName: "mint",
           args: [tokenId],
-          value: priceInWei,
+          value: price,
         }),
       "Token minted successfully!",
       "Failed to mint token"
@@ -153,8 +151,7 @@ export const useContract = () => {
   };
 
   // Buy Token
-  const buyToken = async (tokenId: number, price: string) => {
-    const priceInWei = parseEther(price);
+  const buyToken = async (tokenId: number, price: bigint) => {
 
     await handleTransaction(
       async () =>
@@ -163,7 +160,7 @@ export const useContract = () => {
           address: CONTRACT_ADDRESS,
           functionName: "buyToken",
           args: [tokenId],
-          value: priceInWei,
+          value: price,
         }),
       "Token purchased successfully!",
       "Failed to buy token"
