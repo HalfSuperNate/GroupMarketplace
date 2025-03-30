@@ -166,3 +166,26 @@
 .padLink {
   padding-left: 4px;
 }
+
+.attributesContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem; /* Optional: adds space between items */
+}
+
+.attributesButton {
+  cursor: pointer;
+}
+
+.attribute-item {
+  display: block;  /* Makes each attribute take up its own line */
+  width: 100%;  /* Takes up the full width of the container */
+}
+
+.jsonPreview {
+  white-space: pre-wrap; /* Allows wrapping of text while keeping the formatting */
+  word-wrap: break-word; /* Breaks long words onto the next line if necessary */
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto; /* Ensures no horizontal scrolling */
+}

@@ -97,7 +97,7 @@ export const useContract = () => {
             abi: contractABI,
             address: CONTRACT_ADDRESS,
             functionName: "setMetadata",
-            args: [
+            args: [[
               group,                         // string group
               batchSize,                      // uint256 batchSize
               startingNumber,                 // uint256 startingNumber
@@ -122,7 +122,7 @@ export const useContract = () => {
               imageExtension,                 // string imageExtension
               appendNumberToAnim,             // bool appendNumberToAnim
               animExtension                   // string animExtension
-            ],
+            ]],
             value: parseEther(((0.00005 * batchSize) + 0.0005).toString()),
           }),
         "Metadata set successfully!",

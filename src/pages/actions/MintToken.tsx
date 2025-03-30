@@ -153,12 +153,12 @@ const MintToken = () => {
                     <strong>Metadata:</strong> 
                     <a href={tokenURI} target="_blank" rel="noopener noreferrer">⛓️ On Chain</a>
                   </p>
-                  <p><strong>Name:</strong> {metadata.name}</p>
-                  <p><strong>Description:</strong> {metadata.description}</p>
+                  {/* <p><strong>Name:</strong> {metadata.name}</p> */}
+                  {/* <p><strong>Description:</strong> {metadata.description}</p> */}
                   <p><strong>Creator:</strong> {metadata.creator}</p>
                   <p><strong>Locked:</strong> {metadata.locked ? "Yes" : "No"}</p>
-                  <p><strong>Background:</strong> {metadata.backgroundColor || "N/A"}</p>
-                  <p><strong>Attributes:</strong> {metadata.attributes || "None"}</p>
+                  {/* <p><strong>Background:</strong> {metadata.backgroundColor || "N/A"}</p> */}
+                  {/* <p><strong>Attributes:</strong> {metadata.attributes || "None"}</p> */}
                   <p>
                     <strong>Price:</strong> 
                     {metadata.price !== undefined ? `${formatEther(metadata.price)} ${NATIVE_TOKEN}` : " N/A"}
@@ -198,11 +198,29 @@ const MintToken = () => {
                   <p><strong>Name:</strong> {jsonData.name}</p>
                   <p><strong>Description:</strong> {jsonData.description}</p>
                   {jsonData.external_url && (
-                    <p><strong>External URL:</strong> <a href={jsonData.external_url} target="_blank" rel="noopener noreferrer">Link</a></p>
+                    <p><strong>External URL:</strong> <a href={jsonData.external_url} target="_blank" rel="noopener noreferrer">{jsonData.external_url}</a></p>
                   )}
-                  {jsonData.attributes && jsonData.attributes.map((attr: any, index: number) => (
-                    <p key={index}>{attr.trait_type}: {attr.value}</p>
-                  ))}
+                  {jsonData.attributes && Array.isArray(jsonData.attributes) && jsonData.attributes.length > 0 ? (
+                    jsonData.attributes.map((attr: any, index: number) => {
+                      // Ensure each attribute is an object and has 'trait_type' and 'value' properties with the correct types
+                      if (typeof attr !== 'object' || !attr.trait_type || typeof attr.trait_type !== 'string' || !attr.value || typeof attr.value !== 'string') {
+                        return (
+                          <p key={index} className={styles.warning}>
+                            Invalid attribute format at index {index}. Expected object with "trait_type" (string) and "value" (string).
+                          </p>
+                        );
+                      }
+
+                      // Safe rendering of valid attributes
+                      return (
+                        <p key={index}>
+                          <strong>{attr.trait_type}:</strong> {attr.value}
+                        </p>
+                      );
+                    })
+                  ) : (
+                    <p>No valid attributes found or attributes are malformed.</p>
+                  )}
                 </div>
               ) : (
                 <p>No metadata found.</p>

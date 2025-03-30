@@ -6,6 +6,12 @@ import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Spinner } from "@chakra-ui/react";
 import styles from "../../styles/Home.module.css";
 
+interface Attribute {
+  trait_type: string;
+  value: string;
+  display_type?: string; // Optional, since it can be undefined
+}
+
 const SetMetadata = () => {
   const { setMetadata, loading } = useContract();
 
@@ -32,11 +38,23 @@ const SetMetadata = () => {
     animationUrl: "",
     youtubeUrl: "",
     backgroundColor: "",
-    attributes: "",
+    attributes: "",  // This will store the stringified attributes JSON
     creator: "",
     locked: false,
     price: "0",
   });
+
+  // ✅ State for attributes (define the type properly)
+  const [attributes, setAttributes] = useState<Attribute[]>([]);
+
+  // Display Type options
+  const displayTypes = [
+    "number",
+    "boost_number",
+    "boost_percentage",
+    "date",
+    "value_only"
+  ];
 
   // ✅ Handle changes for the MetadataInput struct
   const handleMetadataInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -52,8 +70,30 @@ const SetMetadata = () => {
     setMetadataStruct((prev) => ({ ...prev, [name]: newValue }));
   };
 
+  const handleAttributeChange = (
+    index: number,
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement> // Update the type to handle both input and select
+  ) => {
+    const { name, value } = e.target;
+    const updatedAttributes = [...attributes];
+    updatedAttributes[index] = { ...updatedAttributes[index], [name]: value };
+    setAttributes(updatedAttributes);
+  };
+
+  const addAttribute = () => {
+    setAttributes([...attributes, { trait_type: "", value: "", display_type: undefined }]);
+  };
+
+  const removeAttribute = (index: number) => {
+    const updatedAttributes = attributes.filter((_, i) => i !== index);
+    setAttributes(updatedAttributes);
+  };
+
   // ✅ Build the final JSON array
   const buildMetadataArray = () => {
+    // Update the attributes string section of metadata
+    const updatedAttributes = JSON.stringify(attributes);
+
     const jsonArray = [
       metadataInput.group,
       metadataInput.batchSize,
@@ -69,7 +109,7 @@ const SetMetadata = () => {
         metadata.animationUrl,
         metadata.youtubeUrl,
         metadata.backgroundColor,
-        metadata.attributes,
+        updatedAttributes,  // Use stringified attributes here
         metadata.creator,
         metadata.locked,
         metadata.price
@@ -184,10 +224,54 @@ const SetMetadata = () => {
             <input className={styles.input} name="backgroundColor" value={metadata.backgroundColor} onChange={handleMetadataChange} />
           </label>
 
-          <label className={styles.label}>
-            Attributes:
-            <input className={styles.input} name="attributes" value={metadata.attributes} onChange={handleMetadataChange} />
-          </label>
+          {/* ✅ Add Attribute Section */}
+          <div className={styles.attributesContainer}>
+            {/* Render input fields for each attribute */}
+            <div className={styles.attributesContainer}>
+              {attributes.map((attribute, index) => (
+                <div key={index} className={styles.attributeItem}>
+                  <label>
+                    Trait Type:
+                    <input
+                      name="trait_type"
+                      value={attribute.trait_type}
+                      onChange={(e) => handleAttributeChange(index, e)}
+                    />
+                  </label>
+
+                  <label>
+                    Value:
+                    <input
+                      name="value"
+                      value={attribute.value}
+                      onChange={(e) => handleAttributeChange(index, e)}
+                    />
+                  </label>
+
+                  <label>
+                    Display Type:
+                    <select
+                      name="display_type"
+                      value={attribute.display_type || ""}
+                      onChange={(e) => handleAttributeChange(index, e)}
+                    >
+                      <option value="">Select</option>
+                      <option value="number">Number</option>
+                      <option value="boost_number">Boost Number</option>
+                      <option value="boost_percentage">Boost Percentage</option>
+                      <option value="date">Date</option>
+                      <option value="value_only">Value Only</option>
+                    </select>
+                  </label>
+
+                  {/* Button to remove an attribute */}
+                  <button className={styles.attributesButton} onClick={() => removeAttribute(index)}>⊖ Remove</button>
+                </div>
+              ))}
+            </div>
+            {/* Add button to add more attributes */}
+            <button className={styles.attributesButton} onClick={addAttribute}>⊕ Add Attribute</button>
+          </div>
 
           <label className={styles.label}>
             Creator Address:
@@ -208,7 +292,7 @@ const SetMetadata = () => {
         {/* ✅ JSON Preview */}
         <div className={styles.form}>
           <h2>JSON Preview</h2>
-          <pre>{JSON.stringify(buildMetadataArray(), null, 2)}</pre>
+          <pre className={styles.jsonPreview}>{JSON.stringify(buildMetadataArray(), null, 2)}</pre>
         </div>
 
         <button className={styles.button} onClick={handleSubmit} disabled={loading}>
