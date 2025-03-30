@@ -23,9 +23,9 @@ const SetMetadata = () => {
     groupURI: "",
     appendNumberToGroupURI: 0,
     groupURIext: "",
-    appendNumber: true,
-    appendNumberToImage: true,
-    imageExtension: ".png",
+    appendNumber: false,
+    appendNumberToImage: false,
+    imageExtension: "",
     appendNumberToAnim: false,
     animExtension: "",
   });
@@ -194,7 +194,8 @@ const SetMetadata = () => {
             <input className={styles.input} name="imageExtension" value={metadataInput.imageExtension} onChange={handleMetadataInputChange} />
           </label>
         </div>
-
+        <br></br>
+        
         {/* ✅ Metadata Struct Fields */}
         <div className={styles.form}>
           <h2>Metadata Struct</h2>
@@ -288,6 +289,7 @@ const SetMetadata = () => {
             <input type="checkbox" name="locked" checked={metadata.locked} onChange={handleMetadataChange} />
           </label>
         </div>
+        <br></br>
 
         {/* ✅ JSON Preview */}
         <div className={styles.form}>
