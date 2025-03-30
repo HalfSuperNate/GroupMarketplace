@@ -93,7 +93,18 @@ const SetMetadata = () => {
   // ✅ Build the final JSON array
   const buildMetadataArray = () => {
     // Update the attributes string section of metadata
-    const updatedAttributes = JSON.stringify(attributes);
+    // Update the attributes string section of metadata
+    const updatedAttributes = attributes.map(attribute => {
+      if (attribute.display_type === "value_only") {
+        // Omit trait_type and display_type for "value_only"
+        return { value: attribute.value };
+      }
+      return {
+        trait_type: attribute.trait_type,
+        value: attribute.value,
+        display_type: attribute.display_type
+      };
+    });
 
     const jsonArray = [
       metadataInput.group,
@@ -110,7 +121,7 @@ const SetMetadata = () => {
         metadata.animationUrl,
         metadata.youtubeUrl,
         metadata.backgroundColor,
-        updatedAttributes,  // Use stringified attributes here
+        JSON.stringify(updatedAttributes),  // Use stringified attributes here
         metadata.creator,
         metadata.locked,
         parseEther(metadata.price).toString()
@@ -232,43 +243,72 @@ const SetMetadata = () => {
             <div className={styles.attributesContainer}>
               {attributes.map((attribute, index) => (
                 <div key={index} className={styles.attributeItem}>
-                  <label>
-                    Trait Type:
+                <label>
+                  Trait Type:
+                  <input
+                    name="trait_type"
+                    value={attribute.trait_type}
+                    onChange={(e) => handleAttributeChange(index, e)}
+                    disabled={attribute.display_type === "value_only"} // Disable when display type is "value_only"
+                  />
+                </label>
+              
+                <label>
+                  Value:
+                  {attribute.display_type === "date" ? (
                     <input
-                      name="trait_type"
-                      value={attribute.trait_type}
+                      type="date"
+                      name="value"
+                      value={
+                        // Convert Unix timestamp to "yyyy-MM-dd" format
+                        attribute.value
+                          ? new Date(parseInt(attribute.value) * 1000).toISOString().split("T")[0] // convert to date and extract the date part
+                          : ""
+                      }
                       onChange={(e) => handleAttributeChange(index, e)}
+                      onBlur={(e) => {
+                        // Convert the selected date to Unix timestamp (seconds)
+                        const date = new Date(e.target.value);
+                        const unixTimestamp = Math.floor(date.getTime() / 1000); // Unix timestamp in seconds
+                        const updatedAttributes = [...attributes];
+                        updatedAttributes[index] = {
+                          ...updatedAttributes[index],
+                          value: unixTimestamp.toString(),
+                        };
+                        setAttributes(updatedAttributes);
+                      }}
                     />
-                  </label>
-
-                  <label>
-                    Value:
+                  ) : (
                     <input
                       name="value"
                       value={attribute.value}
                       onChange={(e) => handleAttributeChange(index, e)}
                     />
-                  </label>
-
-                  <label>
-                    Display Type:
-                    <select
-                      name="display_type"
-                      value={attribute.display_type || ""}
-                      onChange={(e) => handleAttributeChange(index, e)}
-                    >
-                      <option value="">Select</option>
-                      <option value="number">Number</option>
-                      <option value="boost_number">Boost Number</option>
-                      <option value="boost_percentage">Boost Percentage</option>
-                      <option value="date">Date</option>
-                      <option value="value_only">Value Only</option>
-                    </select>
-                  </label>
-
-                  {/* Button to remove an attribute */}
-                  <button className={styles.attributesButton} onClick={() => removeAttribute(index)}>⊖ Remove</button>
-                </div>
+                  )}
+                </label>
+              
+                <label>
+                  Display Type:
+                  <select
+                    name="display_type"
+                    value={attribute.display_type || ""}
+                    onChange={(e) => handleAttributeChange(index, e)}
+                  >
+                    <option value="">Select</option>
+                    <option value="number">Number</option>
+                    <option value="boost_number">Boost Number</option>
+                    <option value="boost_percentage">Boost Percentage</option>
+                    <option value="date">Date</option>
+                    <option value="value_only">Value Only</option>
+                  </select>
+                </label>
+              
+                {/* Button to remove an attribute */}
+                <button className={styles.attributesButton} onClick={() => removeAttribute(index)}>
+                  ⊖ Remove
+                </button>
+              </div>              
+              
               ))}
             </div>
             {/* Add button to add more attributes */}
