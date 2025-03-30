@@ -5,6 +5,7 @@ import { useContract, NATIVE_TOKEN } from "../../hooks/useContract";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Spinner } from "@chakra-ui/react";
 import styles from "../../styles/Home.module.css";
+import { parseEther } from 'viem'
 
 interface Attribute {
   trait_type: string;
@@ -112,7 +113,7 @@ const SetMetadata = () => {
         updatedAttributes,  // Use stringified attributes here
         metadata.creator,
         metadata.locked,
-        metadata.price
+        parseEther(metadata.price).toString()
       ],
       metadataInput.appendNumber,
       metadataInput.appendNumberToImage,
@@ -281,7 +282,15 @@ const SetMetadata = () => {
 
           <label className={styles.label}>
             Price ({NATIVE_TOKEN}):
-            <input className={styles.input} name="price" value={metadata.price} onChange={handleMetadataChange} />
+            <input 
+              className={styles.input} 
+              name="price" 
+              value={metadata.price} 
+              onChange={handleMetadataChange} 
+              type="number" 
+              step="any" // Allows for decimal/floating-point numbers
+              min="0"   // Prevents negative values
+            />
           </label>
 
           <label className={styles.label}>
