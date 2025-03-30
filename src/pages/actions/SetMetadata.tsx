@@ -237,6 +237,7 @@ const SetMetadata = () => {
             <input className={styles.input} name="backgroundColor" value={metadata.backgroundColor} onChange={handleMetadataChange} />
           </label>
 
+          <strong><h2>Attributes:</h2></strong>
           {/* ✅ Add Attribute Section */}
           <div className={styles.attributesContainer}>
             {/* Render input fields for each attribute */}
