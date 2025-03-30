@@ -39,15 +39,14 @@ const MintToken = () => {
       const ipfsHash = uri.replace("ipfs://", "");
       return `https://ipfs.io/ipfs/${ipfsHash}`;
     }
-    return uri;  // If it's already HTTP, return as is
+    return uri; // If it's already HTTP, return as is
   };
 
-  // ✅ Fetch external or on-chain JSON metadata with 404 handling
+  // ✅ Fetch external or on-chain JSON metadata
   useEffect(() => {
     const fetchJsonData = async () => {
       if (!tokenURI) {
         setJsonError("No token URI found.");
-        setJsonData(null);
         return;
       }
 
@@ -56,10 +55,12 @@ const MintToken = () => {
 
       // ✅ Handle Base64-encoded on-chain metadata
       if (tokenURI.startsWith("data:application/json;base64,")) {
+        console.log("On-chain Base64 detected");
         const base64Data = tokenURI.split(",")[1];
-        const decodedJson = decodeBase64Json(base64Data);
 
+        const decodedJson = decodeBase64Json(base64Data);
         if (decodedJson) {
+          // Resolve IPFS image if present
           if (decodedJson.image) {
             decodedJson.image = resolveIPFS(decodedJson.image);
           }
@@ -81,14 +82,17 @@ const MintToken = () => {
         if (!response.ok) {
           // Handle 404 separately
           if (response.status === 404) {
-            throw new Error(`Metadata not found (404).`);
+            setJsonError("Metadata not found (404).");
           } else {
-            throw new Error(`Failed to fetch metadata: ${response.status}`);
+            setJsonError(`Failed to fetch metadata: ${response.status}`);
           }
+          setJsonData(null);
+          return;
         }
 
         const json = await response.json();
 
+        // ✅ Resolve IPFS image link
         if (json.image) {
           json.image = resolveIPFS(json.image);
         }
@@ -96,7 +100,7 @@ const MintToken = () => {
         setJsonData(json);
       } catch (err: any) {
         console.error("Error fetching JSON data:", err);
-        setJsonError(`Failed to load metadata: ${err.message}`);
+        setJsonError(`Failed to load JSON metadata: ${err.message}`);
         setJsonData(null);
       } finally {
         setFetchingJson(false);
@@ -134,70 +138,78 @@ const MintToken = () => {
           </label>
 
           {/* ✅ Displaying metadata */}
-          {loading || loading_a || loading_b ? (
+          {loading ? (
             <div className={styles.metadata}>
               <Spinner size="sm" color="blue.500" />
               <p>Loading metadata...</p>
             </div>
-          ) : error || error_a || error_b ? (
-            <p className={styles.warning}>Error: {error || error_a || error_b}</p>
-          ) : metadata || jsonData ? (
+          ) : error ? (
+            <p className={styles.warning}>Error: {error}</p>
+          ) : metadata ? (
             <div className={styles.metadata}>
-              <p className={styles.truncate}>
-                <strong>Metadata:</strong>
-                <a href={tokenURI} target="_blank" rel="noopener noreferrer">
-                  {onChain ? "⛓️ On Chain" : "💾 Off Chain"}
-                </a>
-              </p>
+              {onChain ? (
+                <div className={styles.metadata}>
+                  <p className={styles.truncate}>
+                    <strong>Metadata:</strong> 
+                    <a href={tokenURI} target="_blank" rel="noopener noreferrer">⛓️ On Chain</a>
+                  </p>
+                  <p><strong>Name:</strong> {metadata.name}</p>
+                  <p><strong>Description:</strong> {metadata.description}</p>
+                  <p><strong>Creator:</strong> {metadata.creator}</p>
+                  <p><strong>Locked:</strong> {metadata.locked ? "Yes" : "No"}</p>
+                  <p><strong>Background:</strong> {metadata.backgroundColor || "N/A"}</p>
+                  <p><strong>Attributes:</strong> {metadata.attributes || "None"}</p>
+                  <p>
+                    <strong>Price:</strong> 
+                    {metadata.price !== undefined ? `${formatEther(metadata.price)} ${NATIVE_TOKEN}` : " N/A"}
+                  </p>
+                </div>
+              ) : (
+                <div className={styles.metadata}>
+                  <p className={styles.truncate}>
+                    <strong>Metadata:</strong> 
+                    <a className={styles.padLink} href={tokenURI} target="_blank" rel="external noopener noreferrer">💾 Off Chain</a>
+                  </p>
+                  <p><strong>Creator:</strong> {metadata.creator}</p>
+                  <p>
+                    <strong>Price:</strong> 
+                    {metadata.price !== undefined ? `${formatEther(metadata.price)} ${NATIVE_TOKEN}` : " N/A"}
+                  </p>
+                </div>
+              )}
 
-              {/* ✅ Display shared fields */}
-              <p><strong>Name:</strong> {jsonData?.name || metadata?.name}</p>
-              <p><strong>Description:</strong> {jsonData?.description || metadata?.description}</p>
-              <p><strong>Creator:</strong> {jsonData?.creator || metadata?.creator}</p>
-              <p><strong>Background:</strong> {jsonData?.background_color || metadata?.backgroundColor || "N/A"}</p>
-
-              {jsonData?.attributes && jsonData.attributes.length > 0 ? (
+              {/* ✅ Displaying external and on-chain JSON data */}
+              {fetchingJson ? (
                 <div>
-                  <strong>Attributes:</strong>
-                  {jsonData.attributes.map((attr: any, index: number) => (
+                  <Spinner size="sm" color="blue.500" />
+                  <p>Loading JSON metadata...</p>
+                </div>
+              ) : jsonError ? (
+                <p className={styles.warning}>Error: {jsonError}</p>
+              ) : jsonData ? (
+                <div className={styles.jsonData}>
+                  <h3>📝 JSON Metadata</h3>
+                  <img
+                    src={jsonData.image}
+                    alt={jsonData.name}
+                    className={styles.image}
+                    style={{ maxWidth: "200px", borderRadius: "8px" }}
+                  />
+                  <p><strong>Name:</strong> {jsonData.name}</p>
+                  <p><strong>Description:</strong> {jsonData.description}</p>
+                  {jsonData.external_url && (
+                    <p><strong>External URL:</strong> <a href={jsonData.external_url} target="_blank" rel="noopener noreferrer">Link</a></p>
+                  )}
+                  {jsonData.attributes && jsonData.attributes.map((attr: any, index: number) => (
                     <p key={index}>{attr.trait_type}: {attr.value}</p>
                   ))}
                 </div>
               ) : (
-                <p><strong>Attributes:</strong> {metadata?.attributes || "None"}</p>
-              )}
-
-              <p>
-                <strong>Price:</strong> 
-                {metadata?.price !== undefined ? `${formatEther(metadata.price)} ${NATIVE_TOKEN}` : "N/A"}
-              </p>
-
-              {/* ✅ Display image */}
-              {jsonData?.image ? (
-                <img
-                  src={jsonData.image}
-                  alt={jsonData?.name || "NFT Image"}
-                  className={styles.image}
-                  style={{ maxWidth: "200px", borderRadius: "8px" }}
-                />
-              ) : (
-                <p>No image available</p>
+                <p>No metadata found.</p>
               )}
             </div>
           ) : (
-            <p className={styles.warning}>Metadata not found for ID: {tokenId}</p>
-          )}
-
-          {/* ✅ Error handling */}
-          {fetchingJson && (
-            <div>
-              <Spinner size="sm" color="blue.500" />
-              <p>Loading metadata...</p>
-            </div>
-          )}
-
-          {jsonError && (
-            <p className={styles.warning}>Error: {jsonError}</p>
+            <p>No metadata found for ID: {tokenId}</p>
           )}
 
           <button
