@@ -1,5 +1,6 @@
 import { useReadContract } from "wagmi";
 import contractABI from "../contracts/GroupMarketplace.json";
+import { Address } from "viem";
 
 const CONTRACT_ADDRESS = `0x0100a530469DB0Dd44c9Af210A465883668C7797`;
 
@@ -95,9 +96,8 @@ export const useFetchTokenUri = (tokenId: number) => {
         args: [tokenId],
     });
 
-    // Explicitly type result.data as a boolean
     const tokenURI = result.data as
-        string  // flag if metadata is false offChain or true onChain
+        string
     ;
 
     return {
@@ -105,4 +105,23 @@ export const useFetchTokenUri = (tokenId: number) => {
         loading_b: result.isLoading,
         error_b: result.isError ? "Failed to fetch token uri" : null,
     };
+};
+
+export const useFetchGroupOwner = (groupName: string) => {
+  const result = useReadContract({
+      abi: contractABI,
+      address: CONTRACT_ADDRESS,
+      functionName: "groupOwners",       // ✅ Ensure you call the correct function
+      args: [groupName],
+  });
+
+  const groupOwner = result.data as
+      Address
+  ;
+
+  return {
+      groupOwner,
+      loading_c: result.isLoading,
+      error_c: result.isError ? "Failed to fetch group owner" : null,
+  };
 };

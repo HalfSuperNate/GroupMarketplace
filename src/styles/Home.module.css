@@ -28,25 +28,10 @@
   flex-grow: 1;
 }
 
-.title a {
-  color: #0d76fc;
-  text-decoration: none;
-}
-
-.title a:hover,
-.title a:focus,
-.title a:active {
-  text-decoration: underline;
-}
-
 .title {
   margin: 3rem 0;
   line-height: 1;
   font-size: 2.5rem;
-}
-
-.title,
-.description {
   text-align: center;
 }
 
@@ -54,6 +39,7 @@
   margin: 0 0 2rem;
   line-height: 1.5;
   font-size: 1.5rem;
+  text-align: center;
 }
 
 .grid {
@@ -76,29 +62,9 @@
   max-width: 350px;
 }
 
-.card:hover,
-.card:focus,
-.card:active {
+.card:hover {
   color: #0d76fc;
   border-color: #0d76fc;
-}
-
-.card h2 {
-  margin: 0 0 1rem 0;
-  font-size: 1.2rem;
-}
-
-.card p {
-  margin: 0;
-  font-size: 1.2rem;
-  line-height: 1.5;
-}
-
-@media (max-width: 600px) {
-  .grid {
-    width: 100%;
-    flex-direction: column;
-  }
 }
 
 .form {
@@ -157,7 +123,7 @@
 }
 
 .truncate {
-  overflow: hidden; 
+  overflow: hidden;
   text-overflow: ellipsis;
   word-wrap: revert;
   display: flex;
@@ -170,27 +136,50 @@
 .attributesContainer {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem; /* Optional: adds space between items */
+  gap: 2vw;
 }
 
 .attributesButton {
   cursor: pointer;
   border-width: 2px;
+  display: block;
 }
 
 .attributesButton:hover {
   background: #424242;
 }
 
+.attributesRemoveButton {
+  cursor: pointer;
+  border-width: 2px;
+  display: block;
+  margin-top: 8px;
+}
+
+.attributesRemoveButton:hover {
+  background: #424242;
+}
+
 .attribute-item {
-  display: block;  /* Makes each attribute take up its own line */
-  width: 100%;  /* Takes up the full width of the container */
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.attributeItemLabel {
+  display: inline-grid;
+  grid-column: 1;
+  width: 100%;
+}
+
+.attributeItemInput {
+  text-align: center;
 }
 
 .jsonPreview {
-  white-space: pre-wrap; /* Allows wrapping of text while keeping the formatting */
-  word-wrap: break-word; /* Breaks long words onto the next line if necessary */
+  white-space: pre-wrap;
+  word-wrap: break-word;
   width: 100%;
   max-width: 100%;
-  overflow-x: auto; /* Ensures no horizontal scrolling */
+  overflow-x: auto;
 }
