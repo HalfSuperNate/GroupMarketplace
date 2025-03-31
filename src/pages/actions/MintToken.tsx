@@ -202,19 +202,21 @@ const MintToken = () => {
                   )}
                   {jsonData.attributes && Array.isArray(jsonData.attributes) && jsonData.attributes.length > 0 ? (
                     jsonData.attributes.map((attr: any, index: number) => {
-                      // Ensure each attribute is an object and has 'trait_type' and 'value' properties with the correct types
-                      if (typeof attr !== 'object' || !attr.trait_type || typeof attr.trait_type !== 'string' || !attr.value || typeof attr.value !== 'string') {
+                      // Ensure each attribute is an object and has 'trait_type' with the correct type
+                      if (typeof attr !== 'object' || !attr.trait_type || typeof attr.trait_type !== 'string' || (!attr.value && attr.value !== 0)) {
                         return (
                           <p key={index} className={styles.warning}>
-                            Invalid attribute format at index {index}. Expected object with "trait_type" (string) and "value" (string).
+                            Invalid attribute format at index {index}. Expected object with "trait_type" (string) and "value" (string or number).
                           </p>
                         );
                       }
 
-                      // Safe rendering of valid attributes
+                      // Display the attribute, handling both string and number values
+                      const displayValue = typeof attr.value === 'number' ? attr.value.toString() : attr.value;
+
                       return (
                         <p key={index}>
-                          <strong>{attr.trait_type}:</strong> {attr.value}
+                          <strong>{attr.trait_type}:</strong> {displayValue}
                         </p>
                       );
                     })
