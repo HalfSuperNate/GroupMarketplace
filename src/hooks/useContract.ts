@@ -115,7 +115,7 @@ export const useContract = () => {
                 metadata.attributes,          // string attributes (encoded JSON string)
                 metadata.creator,             // address creator
                 metadata.locked,              // bool locked
-                BigInt(metadata.price)        // uint256 price in wei
+                parseEther(metadata.price)    // uint256 price in wei
               ],
               appendNumber,                   // bool appendNumber
               appendNumberToImage,            // bool appendNumberToImage

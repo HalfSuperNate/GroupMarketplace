@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useContract, NATIVE_TOKEN } from "../../hooks/useContract";
 import { useFetchGroupOwner } from "../../hooks/useReadContract";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
@@ -105,9 +105,17 @@ const SetMetadata = () => {
     if (groupOwner === '0x0000000000000000000000000000000000000000') {
       setIsGroupAvailable(true);
       setIsOwned(false);
+      setMetadataInput((prev) => ({
+        ...prev,
+        group: groupName  // ✅ Set to true/false
+      }));
     } else if (groupOwner === address) {  // Compare groupOwner with the user's address
       setIsGroupAvailable(true);
       setIsOwned(true);
+      setMetadataInput((prev) => ({
+        ...prev,
+        group: groupName  // ✅ Set to true/false
+      }));
     } else {
       setIsGroupAvailable(false);
       setIsOwned(false);
@@ -162,27 +170,60 @@ const SetMetadata = () => {
   const removeAttribute = (index: number) => {
     const updatedAttributes = attributes.filter((_, i) => i !== index);
     setAttributes(updatedAttributes);
-  };
+  };   
+  
+  // ✅ Use `useEffect` to update state when attributes change
+  useEffect(() => {
+    setMetadataStruct((prev) => ({
+      ...prev,
+      attributes: JSON.stringify(attributes.map(attribute => {
+        if (attribute.display_type === "value_only") {
+          return { value: attribute.value };
+        }
+  
+        const isNumericType = ["number", "boost_number", "boost_percentage", "date"].includes(attribute.display_type || "");
+  
+        return {
+          trait_type: attribute.trait_type,
+          value: isNumericType ? Number(attribute.value) : attribute.value,
+          ...(attribute.display_type ? { display_type: attribute.display_type } : {})
+        };
+      }))
+    }));
+  }, [attributes]);
 
-  // ✅ Build the final JSON array
-  const buildMetadataArray = () => {
+  const buildMetadataArray = useCallback(() => {
     const updatedAttributes = attributes.map(attribute => {
       if (attribute.display_type === "value_only") {
-        // ✅ Omit trait_type and display_type for "value_only"
-        return { value: attribute.value };
+        return { value: attribute.value }; // ✅ Omit trait_type and display_type for "value_only"
       }
   
-      // ✅ Ensure no quotes around numeric values for specific display types
       const isNumericType = ["number", "boost_number", "boost_percentage", "date"].includes(attribute.display_type || "");
-      
+  
       return {
         trait_type: attribute.trait_type,
-        value: isNumericType ? Number(attribute.value) : attribute.value,  // Convert to number if applicable
+        value: isNumericType ? Number(attribute.value) : attribute.value,  // ✅ Convert numbers properly
         ...(attribute.display_type ? { display_type: attribute.display_type } : {})
       };
     });
   
-    const jsonArray = [
+    console.log("Updated Attributes:", JSON.stringify(updatedAttributes)); // ✅ Logs correct attributes
+  
+    // Explicitly type jsonArray
+    const jsonArray: [
+      string, 
+      number, 
+      number, 
+      string, 
+      number, 
+      string, 
+      (string | number | boolean)[], 
+      boolean, 
+      boolean, 
+      string, 
+      boolean, 
+      string
+    ] = [
       metadataInput.group,
       metadataInput.batchSize,
       metadataInput.startingNumber,
@@ -197,11 +238,9 @@ const SetMetadata = () => {
         metadata.animationUrl,
         metadata.youtubeUrl,
         metadata.backgroundColor,
-        JSON.stringify(updatedAttributes, (_, value) =>
-          typeof value === 'number' ? value : value
-        ),  // Use stringified attributes here
+        JSON.stringify(updatedAttributes), // ✅ Stringified attributes stored correctly
         metadata.creator,
-        metadata.locked,
+        String(metadata.locked), // Convert boolean locked to string
         parseEther(metadata.price).toString()
       ],
       metadataInput.appendNumber,
@@ -212,29 +251,34 @@ const SetMetadata = () => {
     ];
   
     return jsonArray;
-  };  
-
+  }, [attributes, metadata, metadataInput]); 
+  
   // ✅ Handle submit
   const handleSubmit = async () => {
     const jsonArray = buildMetadataArray();
-
-    // Prepare parameters for contract call
+  
+    // Explicitly extract attributes as string
+    const attributesString = jsonArray[6][7] as string;
+  
+    console.log("Metadata Attributes (Before Sending):", attributesString);
+  
     await setMetadata(
-      jsonArray[0] as string,                     // group
-      jsonArray[1] as number,                     // batchSize
-      jsonArray[2] as number,                     // startingNumber
-      jsonArray[3] as string,                     // groupURI
-      jsonArray[4] as number,                     // appendNumberToGroupURI
-      jsonArray[5] as string,                     // groupURIext
-      metadata,                                   // Metadata struct
-      jsonArray[7] as boolean,                    // appendNumber
-      jsonArray[8] as boolean,                    // appendNumberToImage
-      jsonArray[9] as string,                     // imageExtension
-      jsonArray[10] as boolean,                   // appendNumberToAnim
-      jsonArray[11] as string,                    // animExtension
+      jsonArray[0] as string,                    
+      jsonArray[1] as number,                    
+      jsonArray[2] as number,                    
+      jsonArray[3] as string,                    
+      jsonArray[4] as number,                    
+      jsonArray[5] as string,                    
+      { ...metadata, attributes: attributesString }, // Correctly formatted attributes
+      jsonArray[7] as boolean,                    
+      jsonArray[8] as boolean,                    
+      jsonArray[9] as string,                    
+      jsonArray[10] as boolean,                   
+      jsonArray[11] as string,                    
     );
   };
-
+  
+  
   return (
     <div className={styles.container}>
       <main className={styles.main}>

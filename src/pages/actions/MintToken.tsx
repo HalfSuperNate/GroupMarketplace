@@ -22,15 +22,33 @@ const MintToken = () => {
 
   // ✅ Improved Base64 decoding with padding and error handling
   const decodeBase64Json = (base64: string): any | null => {
+    let decoded = '';
     try {
+      // Ensure base64 padding is correct
       const paddedBase64 = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
-      const decoded = atob(paddedBase64);
-      return JSON.parse(decoded);
+      
+      // Decode base64
+      decoded = atob(paddedBase64);
+  
+      // Attempt to parse as JSON
+      const parsedJson = JSON.parse(decoded);
+  
+      // If parsing succeeds, return the parsed object
+      return parsedJson;
     } catch (error) {
+      // If an error occurs (invalid base64 or JSON), log it and return null
       console.error("Failed to decode base64 metadata:", error);
+  
+      // Specifically handling invalid JSON errors
+      if (error instanceof SyntaxError) {
+        console.error("Invalid JSON format:", decoded);
+      }
+      
       return null;
     }
   };
+  
+  
 
   // ✅ IPFS to HTTP resolution function
   const resolveIPFS = (uri: string): string => {
@@ -200,10 +218,16 @@ const MintToken = () => {
                   {jsonData.external_url && (
                     <p><strong>External URL:</strong> <a href={jsonData.external_url} target="_blank" rel="noopener noreferrer">{jsonData.external_url}</a></p>
                   )}
+                  {jsonData.animation_url && (
+                    <p><strong>Animation URL:</strong> <a href={jsonData.animation_url} target="_blank" rel="noopener noreferrer">{jsonData.animation_url}</a></p>
+                  )}
+                  {jsonData.youtube_url && (
+                    <p><strong>YouTube URL:</strong> <a href={jsonData.youtube_url} target="_blank" rel="noopener noreferrer">{jsonData.youtube_url}</a></p>
+                  )}
                   {jsonData.attributes && Array.isArray(jsonData.attributes) && jsonData.attributes.length > 0 ? (
                     jsonData.attributes.map((attr: any, index: number) => {
-                      // Ensure each attribute is an object and has 'trait_type' with the correct type
-                      if (typeof attr !== 'object' || !attr.trait_type || typeof attr.trait_type !== 'string' || (!attr.value && attr.value !== 0)) {
+                      // Ensure each attribute is an object and has 'trait_type' or can be 'value only'
+                      if (typeof attr !== 'object' || (!attr.trait_type && !attr.value) || (attr.trait_type && typeof attr.trait_type !== 'string')) {
                         return (
                           <p key={index} className={styles.warning}>
                             Invalid attribute format at index {index}. Expected object with "trait_type" (string) and "value" (string or number).
@@ -211,12 +235,12 @@ const MintToken = () => {
                         );
                       }
 
-                      // Display the attribute, handling both string and number values
+                      // If the attribute has a value but no trait_type, handle as "value only"
                       const displayValue = typeof attr.value === 'number' ? attr.value.toString() : attr.value;
 
                       return (
                         <p key={index}>
-                          <strong>{attr.trait_type}:</strong> {displayValue}
+                          <strong>{attr.trait_type ? attr.trait_type : ''} {displayValue}</strong>
                         </p>
                       );
                     })
