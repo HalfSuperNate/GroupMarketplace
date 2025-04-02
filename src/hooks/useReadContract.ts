@@ -125,3 +125,23 @@ export const useFetchGroupOwner = (groupName: string) => {
       error_c: result.isError ? "Failed to fetch group owner" : null,
   };
 };
+
+export const useFetchIsMinted = (tokenId: number) => {
+  const result = useReadContract({
+      abi: contractABI,
+      address: CONTRACT_ADDRESS,
+      functionName: "isMinted",       // ✅ Ensure you call the correct function
+      args: [tokenId],
+  });
+
+  // Explicitly type result.data as a boolean
+  const isMinted = result.data as
+      boolean  // flag if metadata is false not minted or true is minted
+  ;
+
+  return {
+      isMinted,
+      loading_d: result.isLoading,
+      error_d: result.isError ? "Failed to fetch is minted flag" : null,
+  };
+};

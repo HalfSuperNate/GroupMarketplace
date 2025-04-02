@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useContract, NATIVE_TOKEN } from "../../hooks/useContract";
-import { useFetchMetadata, useFetchMetadataSet, useFetchTokenUri } from "../../hooks/useReadContract";
+import { useFetchMetadata, useFetchMetadataSet, useFetchTokenUri, useFetchIsMinted } from "../../hooks/useReadContract";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Spinner } from "@chakra-ui/react";
 import styles from "../../styles/Home.module.css";
@@ -15,6 +15,7 @@ const MintToken = () => {
   const { metadata, loading, error } = useFetchMetadata(tokenId);
   const { onChain, loading_a, error_a } = useFetchMetadataSet(tokenId);
   const { tokenURI, loading_b, error_b } = useFetchTokenUri(tokenId);
+  const { isMinted, loading_d, error_d } = useFetchIsMinted(tokenId);
 
   const [jsonData, setJsonData] = useState<any>(null);
   const [fetchingJson, setFetchingJson] = useState<boolean>(false);
@@ -259,9 +260,10 @@ const MintToken = () => {
           <button
             className={styles.button}
             onClick={handleMint}
-            disabled={minting || !metadata || metadata?.price === undefined}
+            disabled={isMinted || minting || !metadata || metadata?.price === undefined}
           >
-            {minting ? <Spinner size="sm" color="white" /> : "Mint Token"}
+            {minting ? <Spinner size="sm" color="white" /> : 
+            !isMinted ? "Mint Token" : "Already Minted"}
           </button>
         </div>
       </main>
