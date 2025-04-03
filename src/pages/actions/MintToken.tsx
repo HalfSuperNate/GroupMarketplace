@@ -33,7 +33,7 @@ const MintToken = () => {
 
         // Find the "attributes" field and replace anything following it with "attributes": []
         const attributesIndex = decoded.indexOf('"attributes":');
-        if (attributesIndex !== -1) {
+        if (attributesIndex !== -1 && decoded.includes("[object Object]") || decoded.includes('"attributes":}')) {
             // Cut everything after "attributes" and replace it with []
             decoded = decoded.substring(0, attributesIndex + 13) + ' []}';
         }
