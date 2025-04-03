@@ -191,7 +191,7 @@ const MintToken = () => {
                   {/* <p><strong>Attributes:</strong> {metadata.attributes || "None"}</p> */}
                   <p>
                     <strong>Price:</strong> 
-                    {metadata.price !== undefined ? `${formatEther(metadata.price)} ${NATIVE_TOKEN}` : " N/A"}
+                    {metadata.price !== undefined ? ` ${formatEther(metadata.price)} ${NATIVE_TOKEN}` : " N/A"}
                   </p>
                 </div>
               ) : (
@@ -203,7 +203,7 @@ const MintToken = () => {
                   <p><strong>Creator:</strong> {metadata.creator}</p>
                   <p>
                     <strong>Price:</strong> 
-                    {metadata.price !== undefined ? `${formatEther(metadata.price)} ${NATIVE_TOKEN}` : " N/A"}
+                    {metadata.price !== undefined ? ` ${formatEther(metadata.price)} ${NATIVE_TOKEN}` : " N/A"}
                   </p>
                 </div>
               )}
