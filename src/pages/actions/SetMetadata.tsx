@@ -128,6 +128,20 @@ const SetMetadata = () => {
     setIsOnChain((prevState) => !prevState);
   };
 
+  // Handles file selection and conversion to base64
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; // Get the selected file
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file); // Convert to base64
+    reader.onloadend = () => {
+      if (typeof reader.result === "string") {
+        setMetadataStruct({ ...metadata, image: reader.result }); // Update metadata with base64 image
+      }
+    };
+  };
+
   // Function to remove the background color
   const handleRemoveBackgroundColor = () => {
     setMetadataStruct((prev) => ({ ...prev, backgroundColor: '' }));
@@ -277,7 +291,6 @@ const SetMetadata = () => {
       jsonArray[11] as string,                    
     );
   };
-  
   
   return (
     <div className={styles.container}>
@@ -441,10 +454,36 @@ const SetMetadata = () => {
                 <input className={styles.input} name="externalUrl" value={metadata.externalUrl} onChange={handleMetadataChange} />
               </label>
 
+              {/* Image URL Input (Base64 encoded) */}
               <label className={styles.label}>
                 Image URI:
-                <input className={styles.input} name="image" value={metadata.image} onChange={handleMetadataChange} />
+                <input
+                  className={styles.input}
+                  name="image"
+                  value={metadata.image}
+                  onChange={handleMetadataChange}
+                  placeholder="Base64 Image String"
+                />
               </label>
+
+              {/* File Upload Button */}
+              <label className={styles.label}>
+                Upload Image:
+                <input
+                  className={styles.fileInput}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                />
+              </label>
+
+              {/* Preview Image if available */}
+              {metadata.image && (
+                <div className={styles.previewContainer}>
+                  <p>Image Preview:</p>
+                  <img src={metadata.image} alt="Preview" className={styles.imagePreview} />
+                </div>
+              )}
 
               <label className={styles.label}>
                 Append Number to Image:

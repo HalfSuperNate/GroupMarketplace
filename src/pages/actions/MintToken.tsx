@@ -25,31 +25,42 @@ const MintToken = () => {
   const decodeBase64Json = (base64: string): any | null => {
     let decoded = '';
     try {
-      // Ensure base64 padding is correct
-      const paddedBase64 = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
-      
-      // Decode base64
-      decoded = atob(paddedBase64);
-  
-      // Attempt to parse as JSON
-      const parsedJson = JSON.parse(decoded);
-  
-      // If parsing succeeds, return the parsed object
-      return parsedJson;
+        // Ensure base64 padding is correct
+        const paddedBase64 = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+        
+        // Decode base64
+        decoded = atob(paddedBase64);
+
+        // Find the "attributes" field and replace anything following it with "attributes": []
+        const attributesIndex = decoded.indexOf('"attributes":');
+        if (attributesIndex !== -1) {
+            // Cut everything after "attributes" and replace it with []
+            decoded = decoded.substring(0, attributesIndex + 13) + ' []}';
+        }
+
+        // Attempt to parse as JSON
+        const parsedJson = JSON.parse(decoded);
+
+        // Ensure `attributes` exists and is an array
+        if (!parsedJson.hasOwnProperty("attributes") || parsedJson.attributes === undefined) {
+            console.warn("Warning: Missing `attributes` field, defaulting to an empty array.");
+            parsedJson.attributes = []; // Default to empty array
+        } else if (!Array.isArray(parsedJson.attributes)) {
+            console.warn("Warning: `attributes` field is not an array. Converting to an array.");
+            parsedJson.attributes = [parsedJson.attributes]; // Wrap in an array if it's a single object
+        }
+
+        return parsedJson;
     } catch (error) {
-      // If an error occurs (invalid base64 or JSON), log it and return null
-      console.error("Failed to decode base64 metadata:", error);
-  
-      // Specifically handling invalid JSON errors
-      if (error instanceof SyntaxError) {
-        console.error("Invalid JSON format:", decoded);
-      }
-      
-      return null;
+        console.error("Failed to decode base64 metadata:", error);
+
+        if (error instanceof SyntaxError) {
+            console.error("Invalid JSON format:", decoded);
+        }
+
+        return null;
     }
   };
-  
-  
 
   // ✅ IPFS to HTTP resolution function
   const resolveIPFS = (uri: string): string => {
@@ -241,7 +252,7 @@ const MintToken = () => {
 
                       return (
                         <p key={index}>
-                          <strong>{attr.trait_type ? attr.trait_type : ''} {displayValue}</strong>
+                          <strong>{attr.trait_type ? `${attr.trait_type}:` : ''} {displayValue}</strong>
                         </p>
                       );
                     })
