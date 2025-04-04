@@ -213,7 +213,6 @@ const SetMetadata = () => {
   
     setAttributes(updatedAttributes);
   };
-  
 
   const addAttribute = () => {
     setAttributes([...attributes, { trait_type: "", value: "", display_type: undefined }]);
