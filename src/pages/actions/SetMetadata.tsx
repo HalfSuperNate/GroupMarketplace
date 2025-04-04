@@ -80,7 +80,7 @@ const SetMetadata = () => {
       newValue = value; // No change for price
     } else if (type === "checkbox") {
       // For checkboxes, we store the checked status as a string
-      newValue = (e.target as HTMLInputElement).checked.toString();
+      newValue = (e.target as HTMLInputElement).checked;
     } else if (name === "backgroundColor" && type === "color") {
       // Remove the '#' from the color value
       newValue = value.slice(1);
@@ -140,6 +140,44 @@ const SetMetadata = () => {
         setMetadataStruct({ ...metadata, image: reader.result }); // Update metadata with base64 image
       }
     };
+  };
+
+  const [imageMode, setImageMode] = useState<"manual" | "upload">("manual");
+  const handleImageMode = (mode: string) => {
+    setMetadataStruct((prev) => ({ ...prev, image: '' }));
+    if (mode === "upload") {
+      setMetadataInput((prev) => ({ ...prev, appendNumberToImage: false, imageExtension: "" }));
+      setImageMode("upload");
+    } else {
+      setImageMode("manual");
+    }
+  };
+
+  {/* Determine Final Image Source */}
+  const getFinalImageSrc = () => {
+    let finalImage = metadata.image;
+  
+    if (imageMode === "manual") {
+      if (!finalImage) {
+        return "/path-to-placeholder-image.png"; // Provide a valid placeholder image path
+      }
+  
+      if (finalImage.startsWith("ipfs://")) {
+        finalImage = finalImage.replace("ipfs://", "https://ipfs.io/ipfs/");
+      }
+  
+      // Append number if the option is enabled
+      if (metadataInput.appendNumberToImage) {
+        finalImage += metadataInput.startingNumber || "";
+      }
+  
+      // Append image extension if provided
+      if (metadataInput.imageExtension) {
+        finalImage += metadataInput.imageExtension;
+      }
+    }
+  
+    return finalImage || "https://dummyimage.com/300x300/ccc/000.png&text=No+Image"; // Default if the image is empty
   };
 
   // Function to remove the background color
@@ -221,7 +259,7 @@ const SetMetadata = () => {
       };
     });
   
-    console.log("Updated Attributes:", JSON.stringify(updatedAttributes)); // ✅ Logs correct attributes
+    //console.log("Updated Attributes:", JSON.stringify(updatedAttributes)); // ✅ Logs correct attributes
   
     // Explicitly type jsonArray
     const jsonArray: [
@@ -454,57 +492,106 @@ const SetMetadata = () => {
                 <input className={styles.input} name="externalUrl" value={metadata.externalUrl} onChange={handleMetadataChange} />
               </label>
 
-              {/* Image URL Input (Base64 encoded) */}
-              <label className={styles.label}>
-                Image URI:
-                <input
-                  className={styles.input}
-                  name="image"
-                  value={metadata.image}
-                  onChange={handleMetadataChange}
-                  placeholder="Base64 Image String"
-                />
-              </label>
+              {/* Image Selection Mode */}
+              <div className={styles.radioGroup}>
+                <label>
+                  <input
+                    type="radio"
+                    name="imageMode"
+                    value="manual"
+                    checked={imageMode === "manual"}
+                    onChange={() => handleImageMode("manual")}
+                  />
+                  Enter Image URI
+                </label>
+                <br></br>
+                <label>
+                  <input
+                    type="radio"
+                    name="imageMode"
+                    value="upload"
+                    checked={imageMode === "upload"}
+                    onChange={() => handleImageMode("upload")}
+                  />
+                  Upload Image
+                </label>
+              </div>
 
-              {/* File Upload Button */}
-              <label className={styles.label}>
-                Upload Image:
-                <input
-                  className={styles.fileInput}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                />
-              </label>
+              {/* Conditional Rendering Based on Selection */}
+              {imageMode === "manual" ? (
+                <>
+                  {/* Manual Image URL Entry */}
+                  <label className={styles.label}>
+                    Image URI:
+                    <input
+                      className={styles.input}
+                      name="image"
+                      value={metadata.image}
+                      onChange={handleMetadataChange}
+                      placeholder="Image Path"
+                    />
+                  </label>
 
-              {/* Preview Image if available */}
-              {metadata.image && (
-                <div className={styles.previewContainer}>
-                  <p>Image Preview:</p>
-                  <img src={metadata.image} alt="Preview" className={styles.imagePreview} />
-                </div>
+                  {/* Options only for Manual Input */}
+                  <label className={styles.label}>
+                    Append Number to Image:
+                    <input
+                      className={styles.input}
+                      type="checkbox"
+                      name="appendNumberToImage"
+                      checked={metadataInput.appendNumberToImage}
+                      onChange={(e) =>
+                        setMetadataInput((prev) => ({
+                          ...prev,
+                          appendNumberToImage: e.target.checked
+                        }))
+                      }
+                    />
+                  </label>
+
+                  <label className={styles.label}>
+                    Image Extension:
+                    <input
+                      className={styles.input}
+                      name="imageExtension"
+                      value={metadataInput.imageExtension}
+                      onChange={handleMetadataInputChange}
+                    />
+                  </label>
+                </>
+              ) : (
+                // File Upload
+                <label className={styles.label}>
+                  Upload Image:
+                  <input
+                    className={styles.fileInput}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                  />
+                </label>
               )}
 
-              <label className={styles.label}>
-                Append Number to Image:
-                <input
-                  className={styles.input}
-                  type="checkbox"
-                  name="appendNumberToImage"
-                  checked={metadataInput.appendNumberToImage}  // ✅ Checked if true
-                  onChange={(e) =>
-                    setMetadataInput((prev) => ({
-                      ...prev,
-                      appendNumberToImage: e.target.checked  // ✅ Set to true/false
-                    }))
-                  }
-                />
-              </label>
-
-              <label className={styles.label}>
-                Image Extension:
-                <input className={styles.input} name="imageExtension" value={metadataInput.imageExtension} onChange={handleMetadataInputChange} />
-              </label>
+              {/* Preview Image if Available */}
+              {metadata.image && (
+                <div>
+                  <p>Image Preview:</p>
+                  <div
+                    className={styles.previewContainer}
+                    style={{ backgroundColor: metadata.backgroundColor ? `#${metadata.backgroundColor}` : "transparent" }}
+                  >
+                    <img
+                      src={getFinalImageSrc()}
+                      alt="Preview"
+                      className={styles.imagePreview}
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = `https://dummyimage.com/300x300/${metadata.backgroundColor}/000.png&text=No+Image+Found`;
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
 
               <label className={styles.label}>
                 Background Color:
@@ -514,7 +601,7 @@ const SetMetadata = () => {
                   className={styles.inputColor}
                   type="color"
                   name="backgroundColor"
-                  value={`#${metadata.backgroundColor}`}
+                  value={metadata.backgroundColor && `#${metadata.backgroundColor}` || '#000000'}
                   onChange={handleMetadataChange}
                 />
               </label>
@@ -745,7 +832,12 @@ const SetMetadata = () => {
 
               <label className={styles.label}>
                 Locked:
-                <input type="checkbox" name="locked" checked={metadata.locked} onChange={handleMetadataChange} />
+                <input
+                  type="checkbox"
+                  name="locked"
+                  checked={metadata.locked === true} // Ensure it's a boolean
+                  onChange={handleMetadataChange}
+                />
               </label>
             </div>
             <br></br>
