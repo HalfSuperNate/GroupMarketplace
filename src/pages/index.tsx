@@ -1,12 +1,14 @@
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+// import { ConnectButton } from '@rainbow-me/rainbowkit';
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import styles from '../styles/Home.module.css';
 import Link from 'next/link';
+import Navbar from "@/components/Navbar";
 
 const Home: NextPage = () => {
   return (
     <div className={styles.container}>
+      <Navbar />
       <Head>
         <title>Group Marketplace</title>
         <meta content="Group Marketplace DApp" name="description" />
@@ -14,7 +16,7 @@ const Home: NextPage = () => {
       </Head>
 
       <main className={styles.main}>
-        <ConnectButton label="Connect" accountStatus="address" chainStatus="none" showBalance={false} />
+        {/* <ConnectButton label="Connect" accountStatus="address" chainStatus="none" showBalance={false} /> */}
 
         <h1 className={styles.title}>
           Welcome to <a href="https://www.rainbowkit.com" target="_blank">Group Marketplace</a>
@@ -26,14 +28,14 @@ const Home: NextPage = () => {
 
         <div className={styles.grid}>
           <Link href="/actions/SetMetadata" legacyBehavior>
-            <a target="_blank" rel="noopener noreferrer" className={styles.card}>
+            <a className={styles.card}>
               <h2>Set Metadata &rarr;</h2>
               <p>Create metadata for your NFT group.</p>
             </a>
           </Link>
 
           <Link href="/actions/MintToken" legacyBehavior>
-            <a target="_blank" rel="noopener noreferrer" className={styles.card}>
+            <a className={styles.card}>
               <h2>Mint Token &rarr;</h2>
               <p>Mint a new token with metadata.</p>
             </a>

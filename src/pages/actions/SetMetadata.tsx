@@ -3,11 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useContract, NATIVE_TOKEN } from "../../hooks/useContract";
 import { useFetchGroupOwner } from "../../hooks/useReadContract";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+// import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Spinner } from "@chakra-ui/react";
 import styles from "../../styles/Home.module.css";
 import { parseEther } from 'viem'
 import { useAccount } from "wagmi";
+import Navbar from "@/components/Navbar";
 
 interface Attribute {
   trait_type: string;
@@ -331,13 +332,14 @@ const SetMetadata = () => {
   
   return (
     <div className={styles.container}>
+      <Navbar />
       <main className={styles.main}>
         <h1 className={styles.title}>Set Metadata</h1>
 
         {/* ✅ Connect Button */}
-        <div className={styles.connectButton}>
+        {/* <div className={styles.connectButton}>
           <ConnectButton label="Connect Wallet" accountStatus="address" chainStatus="none" />
-        </div>
+        </div> */}
 
         {/* ✅ MetadataInput Fields */}
         <div className={styles.form}>
@@ -400,7 +402,6 @@ const SetMetadata = () => {
             </label>
             <p>{isOnChain ? '⛓️ On-Chain' : '💾 Off-Chain'}</p>
           </div>
-          
           
           {!isOnChain ? (
             <div>

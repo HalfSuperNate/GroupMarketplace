@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react";
 import { useContract, NATIVE_TOKEN } from "../../hooks/useContract";
 import { useFetchMetadata, useFetchMetadataSet, useFetchTokenUri, useFetchIsMinted } from "../../hooks/useReadContract";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+// import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Spinner } from "@chakra-ui/react";
 import styles from "../../styles/Home.module.css";
 import { formatEther } from "viem";
+import Navbar from "@/components/Navbar";
 
 const MintToken = () => {
   const { mintToken, loading: minting } = useContract();
@@ -148,12 +149,13 @@ const MintToken = () => {
 
   return (
     <div className={styles.container}>
+      <Navbar />
       <main className={styles.main}>
         <h1 className={styles.title}>Mint Token</h1>
 
-        <div className={styles.connectButton}>
+        {/* <div className={styles.connectButton}>
           <ConnectButton label="Connect Wallet" accountStatus="address" chainStatus="none" />
-        </div>
+        </div> */}
 
         <div className={styles.form}>
           <label className={styles.label}>
@@ -219,12 +221,14 @@ const MintToken = () => {
               ) : jsonData ? (
                 <div className={styles.jsonData}>
                   <h3>📝 JSON Metadata</h3>
-                  <img
-                    src={jsonData.image}
-                    alt={jsonData.name}
-                    className={styles.image}
-                    style={{ maxWidth: "200px", borderRadius: "8px" }}
-                  />
+                  <a href={jsonData.image} target="_blank" rel="noopener noreferrer">
+                    <img
+                      src={jsonData.image}
+                      alt={jsonData.name}
+                      className={styles.image}
+                      style={{ maxWidth: "200px", borderRadius: "8px" }}
+                    />
+                  </a>
                   <p><strong>Name:</strong> {jsonData.name}</p>
                   <p><strong>Description:</strong> {jsonData.description}</p>
                   {jsonData.external_url && (

@@ -145,3 +145,20 @@ export const useFetchIsMinted = (tokenId: number) => {
       error_d: result.isError ? "Failed to fetch is minted flag" : null,
   };
 };
+
+export const useFetchTokensInGroup = (groupName: string) => {
+  const result = useReadContract({
+    abi: contractABI,
+    address: CONTRACT_ADDRESS,
+    functionName: "getTokensByGroup",
+    args: [groupName],
+  });
+
+  const tokenIds = result.data as number[];
+
+  return {
+    tokenIds,
+    loading: result.isLoading,
+    error: result.isError ? "Failed to fetch token IDs in group" : null,
+  };
+};
