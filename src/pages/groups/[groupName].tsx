@@ -1,22 +1,24 @@
 import { useRouter } from 'next/router';
 import { useState, useEffect } from "react";
+import { NATIVE_TOKEN } from "../../hooks/useContract";
 import { useFetchTokensInGroup, useFetchMetadata, useFetchIsMinted, useFetchTokenUri } from '../../hooks/useReadContract';
 import styles from '../../styles/Home.module.css';
 import Navbar from "@/components/Navbar";
+import { formatEther } from 'viem';
 
 const GroupPage = () => {
     const router = useRouter();
     const { groupName } = router.query as { groupName: string };
 
-    const { tokenIds, loading, error } = useFetchTokensInGroup(groupName);
+    const { tokenIds, loading_e, error_e } = useFetchTokensInGroup(groupName);
 
-    if (loading) return <p>Loading tokens for group: {groupName}</p>;
-    if (error || !tokenIds) return <p>Error fetching group tokens</p>;
+    if (loading_e) return <p>Loading tokens for group: {groupName}</p>;
+    if (error_e || !tokenIds) return <p>Error fetching group tokens</p>;
 
     return (
         <div className={styles.container}>
             <Navbar />
-            <h1 className={styles.groupHeading}>Tokens in Group: {groupName}</h1>
+            <h1 className={styles.groupHeading}>{groupName}</h1>
             <div className={styles.groupGrid}>
                 {tokenIds.map((tokenId) => (
                     <TokenCard key={tokenId} tokenId={tokenId} />
@@ -37,7 +39,15 @@ const TokenCard = ({ tokenId }: { tokenId: number }) => {
     const [fetchingJson, setFetchingJson] = useState<boolean>(false);
     const [jsonError, setJsonError] = useState<string | null>(null);
 
-    if (tokenId === 0) return null;
+    const router = useRouter();
+
+    const goToBuy = (tokenId: number) => {
+        router.push(`/actions/Token?tokenId=${tokenId}`);
+    };
+
+    const goToMint = (tokenId: number) => {
+        router.push(`/actions/Token?tokenId=${tokenId}`);
+    };
 
     // ✅ Improved Base64 decoding with padding and error handling
     const decodeBase64Json = (base64: string): any | null => {
@@ -153,26 +163,36 @@ const TokenCard = ({ tokenId }: { tokenId: number }) => {
         }
     };
 
-    if (metadata?.image === "") {
-        fetchJsonData();
-        console.log(jsonData);
-    }
+    useEffect(() => {
+        if (metadata?.image === "" && tokenURI) {
+            fetchJsonData();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [metadata?.image, tokenURI]);
 
-    // ❌ NEED TO FIX JSON FETCHING ERROR IF 404
+    const resolvePrice = (priceIn: bigint | undefined): string => {
+        if (!priceIn) return "";
+        return formatEther(priceIn);
+    };
 
     if (!metadata && !jsonData) return null;
 
     return (
-        <div className={styles.groupCard}>
-            <img src={metadata?.image ? resolveIPFS(metadata.image) 
-                : (jsonData ? jsonData.image 
-                : undefined)} alt={metadata?.name || undefined} className={styles.groupImage} />
-            <h2>{metadata?.name || undefined}</h2>
-            <p>{metadata?.description || undefined}</p>
+        <div className={styles.groupCard} onClick={() => goToMint(tokenId)}>
+            {jsonError && <p className={styles.error}>Error: {jsonError}</p>}
+            {(metadata?.image || jsonData?.image) && (
+                <img
+                    src={resolveIPFS(metadata?.image || jsonData?.image)}
+                    alt={metadata?.name || jsonData?.name || `Token #${tokenId}`}
+                    className={styles.groupImage}
+                />
+            )}
+            <h2>{metadata?.name || jsonData?.name || `Token #${tokenId}`}</h2>
+            {/* <p>{metadata?.description || jsonData?.description || "No description"}</p> */}
             <p>
                 {isMinted
                     ? `Already minted`
-                    : `Price: ${Number(metadata?.price) / 1e18} ETH`}
+                    : `Price: ${resolvePrice(metadata?.price)} ${NATIVE_TOKEN}`}
             </p>
         </div>
     );

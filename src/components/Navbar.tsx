@@ -20,8 +20,8 @@ const Navbar = () => {
     <nav className={styles.nav}>
       <ul className={styles.navList}>
         <li><Link href="/">Home</Link></li>
-        <li><Link href="/actions/MintToken">Mint</Link></li>
-        <li><Link href="/actions/SetMetadata">Set Metadata</Link></li>
+        <li><Link href="/actions/SetMetadata">Create</Link></li>
+        <li><Link href="/actions/Token?tokenId=0">Token</Link></li>
         <li>
           <Link
             href="https://amoy.polygonscan.com/address/0x0100a530469db0dd44c9af210a465883668c7797"
@@ -40,7 +40,7 @@ const Navbar = () => {
               placeholder="Search group..."
               className={styles.searchInput}
             />
-            <button type="submit" className={styles.searchButton}>Go</button>
+            <button type="submit" className={styles.searchButton}>⏎</button>
           </form>
         </li>
         <li className={styles.connectButtonWrapper}>

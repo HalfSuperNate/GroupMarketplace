@@ -266,13 +266,16 @@
 }
 
 .groupCard {
+  display: flex;
+  flex-direction: column;
   border: 1px solid #eaeaea;
   border-radius: 12px;
   padding: 1rem;
   text-align: center;
-  background-color: #fff;
+  background-color: #4242423d;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   transition: transform 0.2s ease;
+  cursor: pointer;
 }
 
 .groupCard:hover {

@@ -19,54 +19,36 @@ const Home: NextPage = () => {
         {/* <ConnectButton label="Connect" accountStatus="address" chainStatus="none" showBalance={false} /> */}
 
         <h1 className={styles.title}>
-          Welcome to <a href="https://www.rainbowkit.com" target="_blank">Group Marketplace</a>
+          Welcome to <a href="https://amoy.polygonscan.com/address/0x0100a530469db0dd44c9af210a465883668c7797" target="_blank">Group Marketplace</a>
         </h1>
 
         <p className={styles.description}>
           Create, browse, buy, sell, and manage NFTs
+          <br></br>on<br></br>
+          Group Marketplace
         </p>
 
         <div className={styles.grid}>
           <Link href="/actions/SetMetadata" legacyBehavior>
             <a className={styles.card}>
-              <h2>Set Metadata &rarr;</h2>
-              <p>Create metadata for your NFT group.</p>
+              <h2>Create &rarr;</h2>
+              <p>Setup new tokens for your group or make a new group.</p>
             </a>
           </Link>
 
-          <Link href="/actions/MintToken" legacyBehavior>
+          <Link href="/actions/Token?tokenId=0" legacyBehavior>
             <a className={styles.card}>
-              <h2>Mint Token &rarr;</h2>
-              <p>Mint a new token with metadata.</p>
+              <h2>Token Actions &rarr;</h2>
+              <p>Mint, Buy, View Details & More for created tokens.</p>
             </a>
           </Link>
 
-          <Link href="/actions/BuyToken" legacyBehavior>
-            <a target="_blank" rel="noopener noreferrer" className={styles.card}>
-              <h2>Buy Token &rarr;</h2>
-              <p>Purchase an NFT listed for sale.</p>
-            </a>
-          </Link>
-
-          <Link href="/actions/CancelListing" legacyBehavior>
-            <a target="_blank" rel="noopener noreferrer" className={styles.card}>
-              <h2>Cancel Listing &rarr;</h2>
-              <p>Cancel an existing NFT listing.</p>
-            </a>
-          </Link>
-
-          <Link href="/actions/MoveToken" legacyBehavior>
-            <a target="_blank" rel="noopener noreferrer" className={styles.card}>
-              <h2>Move Token &rarr;</h2>
-              <p>Move a token to a different group.</p>
-            </a>
-          </Link>
         </div>
       </main>
 
       <footer className={styles.footer}>
-        <a href="https://rainbow.me" rel="noopener noreferrer" target="_blank">
-          Made with ❤️ by your frens at 🌈
+        <a href="https://n8kportfolio.vercel.app/" rel="noopener noreferrer" target="_blank">
+          Made with ❤️ 🐸
         </a>
       </footer>
     </div>

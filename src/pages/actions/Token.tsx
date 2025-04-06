@@ -1,8 +1,9 @@
 "use client";
 
+import { useRouter } from 'next/router';
 import { useState, useEffect } from "react";
 import { useContract, NATIVE_TOKEN } from "../../hooks/useContract";
-import { useFetchMetadata, useFetchMetadataSet, useFetchTokenUri, useFetchIsMinted } from "../../hooks/useReadContract";
+import { useFetchMetadata, useFetchMetadataSet, useFetchTokenUri, useFetchIsMinted, useFetchListing } from "../../hooks/useReadContract";
 // import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Spinner } from "@chakra-ui/react";
 import styles from "../../styles/Home.module.css";
@@ -11,12 +12,24 @@ import Navbar from "@/components/Navbar";
 
 const MintToken = () => {
   const { mintToken, loading: minting } = useContract();
-  const [tokenId, setTokenId] = useState<number>(0);
+  const router = useRouter();
+  const [tokenId, setTokenId] = useState<number | null>(null);
 
-  const { metadata, loading, error } = useFetchMetadata(tokenId);
-  const { onChain, loading_a, error_a } = useFetchMetadataSet(tokenId);
-  const { tokenURI, loading_b, error_b } = useFetchTokenUri(tokenId);
-  const { isMinted, loading_d, error_d } = useFetchIsMinted(tokenId);
+  // Read tokenId from query on mount
+  useEffect(() => {
+    if (router.isReady && router.query.tokenId) {
+      const queryTokenId = parseInt(router.query.tokenId as string);
+      if (!isNaN(queryTokenId)) {
+        setTokenId(queryTokenId);
+      }
+    }
+  }, [router.isReady, router.query.tokenId]);
+
+  const { metadata, loading, error } = useFetchMetadata(tokenId ?? 0);
+  const { onChain, loading_a, error_a } = useFetchMetadataSet(tokenId ?? 0);
+  const { tokenURI, loading_b, error_b } = useFetchTokenUri(tokenId ?? 0);
+  const { isMinted, loading_d, error_d } = useFetchIsMinted(tokenId ?? 0);
+  const { listing, loading_f, error_f } = useFetchListing(tokenId ?? 0);
 
   const [jsonData, setJsonData] = useState<any>(null);
   const [fetchingJson, setFetchingJson] = useState<boolean>(false);
@@ -76,22 +89,24 @@ const MintToken = () => {
   // ✅ Fetch external or on-chain JSON metadata
   useEffect(() => {
     const fetchJsonData = async () => {
+      // 🧼 Reset previous state before fetching
+      setJsonData(null);
+      setJsonError(null);
+  
       if (!tokenURI) {
         setJsonError("No token URI found.");
         return;
       }
-
+  
       setFetchingJson(true);
-      setJsonError(null);
-
+  
       // ✅ Handle Base64-encoded on-chain metadata
       if (tokenURI.startsWith("data:application/json;base64,")) {
         console.log("On-chain Base64 detected");
         const base64Data = tokenURI.split(",")[1];
-
+  
         const decodedJson = decodeBase64Json(base64Data);
         if (decodedJson) {
-          // Resolve IPFS image if present
           if (decodedJson.image) {
             decodedJson.image = resolveIPFS(decodedJson.image);
           }
@@ -99,53 +114,63 @@ const MintToken = () => {
         } else {
           setJsonError("Failed to decode on-chain metadata.");
         }
-
+  
         setFetchingJson(false);
         return;
       }
-
+  
       // ✅ Handle Off-Chain IPFS or HTTP metadata
       const resolvedUri = resolveIPFS(tokenURI);
-
+  
       try {
         const response = await fetch(resolvedUri);
-
+  
         if (!response.ok) {
-          // Handle 404 separately
           if (response.status === 404) {
             setJsonError("Metadata not found (404).");
           } else {
             setJsonError(`Failed to fetch metadata: ${response.status}`);
           }
-          setJsonData(null);
           return;
         }
-
+  
         const json = await response.json();
-
-        // ✅ Resolve IPFS image link
+  
         if (json.image) {
           json.image = resolveIPFS(json.image);
         }
-
+  
         setJsonData(json);
       } catch (err: any) {
         console.error("Error fetching JSON data:", err);
         setJsonError(`Failed to load JSON metadata: ${err.message}`);
-        setJsonData(null);
       } finally {
         setFetchingJson(false);
       }
     };
-
+  
     fetchJsonData();
-  }, [tokenURI]);
+  }, [tokenURI, tokenId]); // include tokenId to ensure reset when switching
+  
 
   const handleMint = async () => {
-    if (tokenId < 0 || !metadata || metadata.price === undefined) return;
+    if (tokenId === null || tokenId < 0 || !metadata || metadata.price === undefined) return;
     const priceInWei = metadata?.price || 0n;
     await mintToken(tokenId, priceInWei);
   };
+
+  if (tokenId === null) {
+    setTokenId(parseInt(router.query.tokenId as string));
+    return (
+      <div className={styles.container}>
+        <Navbar />
+        <main className={styles.main}>
+          <Spinner size="lg" color="blue.500" />
+          <p>Loading token ID...</p>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
@@ -163,7 +188,7 @@ const MintToken = () => {
             <input
               className={styles.input}
               type="number"
-              value={tokenId}
+              value={tokenId ?? ''}
               onChange={(e) => setTokenId(Number(e.target.value))}
               min={0}
             />

@@ -18,8 +18,18 @@ export interface Metadata {
   price: bigint;            // Price is a uint256, use bigint to handle large numbers
 }
 
+export interface Listing {
+  price: bigint;
+  expiration: bigint;
+  active: boolean;
+  seller: `0x${string}`;
+}
+
 // ✅ Custom hook for fetching metadata
-export const useFetchMetadata = (tokenId: number) => {
+export const useFetchMetadata = (tokenId: number | undefined) => {
+  if (tokenId === undefined) {
+    return { metadata: null, loading: false, error: null };
+  }
   const result = useReadContract({
     abi: contractABI,
     address: CONTRACT_ADDRESS,
@@ -68,7 +78,10 @@ export const useFetchMetadata = (tokenId: number) => {
   };
 };
 
-export const useFetchMetadataSet = (tokenId: number) => {
+export const useFetchMetadataSet = (tokenId: number | undefined) => {
+  if (tokenId === undefined) {
+    return { metadata: null, loading_a: false, error_a: null };
+  }
     const result = useReadContract({
         abi: contractABI,
         address: CONTRACT_ADDRESS,
@@ -88,7 +101,10 @@ export const useFetchMetadataSet = (tokenId: number) => {
     };
 };
 
-export const useFetchTokenUri = (tokenId: number) => {
+export const useFetchTokenUri = (tokenId: number | undefined) => {
+  if (tokenId === undefined) {
+    return { metadata: null, loading_b: false, error_b: null };
+  }
     const result = useReadContract({
         abi: contractABI,
         address: CONTRACT_ADDRESS,
@@ -126,7 +142,10 @@ export const useFetchGroupOwner = (groupName: string) => {
   };
 };
 
-export const useFetchIsMinted = (tokenId: number) => {
+export const useFetchIsMinted = (tokenId: number | undefined) => {
+  if (tokenId === undefined) {
+    return { metadata: null, loading_d: false, error_d: null };
+  }
   const result = useReadContract({
       abi: contractABI,
       address: CONTRACT_ADDRESS,
@@ -158,7 +177,43 @@ export const useFetchTokensInGroup = (groupName: string) => {
 
   return {
     tokenIds,
-    loading: result.isLoading,
-    error: result.isError ? "Failed to fetch token IDs in group" : null,
+    loading_e: result.isLoading,
+    error_e: result.isError ? "Failed to fetch token IDs in group" : null,
+  };
+};
+
+export const useFetchListing = (tokenId: number | undefined) => {
+  if (tokenId === undefined) {
+    return { listing: null, loading_f: false, error_f: null };
+  }
+  const result = useReadContract({
+      abi: contractABI,
+      address: CONTRACT_ADDRESS,
+      functionName: "listings",       // ✅ Ensure you call the correct function
+      args: [tokenId],
+  });
+
+  // Explicitly type result.data as a tuple
+  const fullData = result.data as [
+    bigint,
+    bigint,
+    boolean,
+    string
+  ];
+
+  // Handle the metadata conversion manually
+  const listing: Listing | null = fullData
+    ? {
+        price: BigInt(fullData[0].toString()),
+        expiration: BigInt(fullData[1].toString()),
+        active: fullData[2],
+        seller: fullData[3] as `0x${string}`,
+      }
+    : null;
+
+  return {
+      listing,
+      loading_f: result.isLoading,
+      error_f: result.isError ? "Failed to fetch is minted flag" : null,
   };
 };
