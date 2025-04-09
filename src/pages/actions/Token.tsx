@@ -3,15 +3,17 @@
 import { useRouter } from 'next/router';
 import { useState, useEffect } from "react";
 import { useContract, NATIVE_TOKEN } from "../../hooks/useContract";
-import { useFetchMetadata, useFetchMetadataSet, useFetchTokenUri, useFetchIsMinted, useFetchListing } from "../../hooks/useReadContract";
+import { useFetchMetadata, useFetchMetadataSet, useFetchTokenUri, useFetchIsMinted, useFetchListing, useFetchTokenOwner } from "../../hooks/useReadContract";
 // import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Spinner } from "@chakra-ui/react";
 import styles from "../../styles/Home.module.css";
-import { formatEther } from "viem";
+import { formatEther, parseEther } from "viem";
 import Navbar from "@/components/Navbar";
+import { useAccount } from "wagmi";
 
-const MintToken = () => {
-  const { mintToken, loading: minting } = useContract();
+const TokenAction = () => {
+  const { address } = useAccount();
+  const { mintToken, listToken, buyToken, loading: isLoading } = useContract();
   const router = useRouter();
   const [tokenId, setTokenId] = useState<number | null>(null);
 
@@ -30,6 +32,19 @@ const MintToken = () => {
   const { tokenURI, loading_b, error_b } = useFetchTokenUri(tokenId ?? 0);
   const { isMinted, loading_d, error_d } = useFetchIsMinted(tokenId ?? 0);
   const { listing, loading_f, error_f } = useFetchListing(tokenId ?? 0);
+  const { tokenOwner, loading_g, error_g } = useFetchTokenOwner(tokenId ?? 0);
+  const isTokenOwner = address === tokenOwner || false;
+
+  const now = Math.floor(Date.now() / 1000); // current Unix timestamp
+  const isListedAndActive = listing?.active && listing.expiration > now || false;
+  const displayPrice = isMinted ? listing?.price : metadata?.price;
+
+  const [inputSalePrice, setInputSalePrice] = useState<number>(0);
+  const [inputDate, setInputDate] = useState<string>("");
+  const [inputHour, setInputHour] = useState<number>(0);
+  const [inputMinute, setInputMinute] = useState<number>(0);
+  const [inputSecond, setInputSecond] = useState<number>(0);
+  const [inputExpiration, setInputExpiration] = useState<number>(0);
 
   const [jsonData, setJsonData] = useState<any>(null);
   const [fetchingJson, setFetchingJson] = useState<boolean>(false);
@@ -151,12 +166,42 @@ const MintToken = () => {
   
     fetchJsonData();
   }, [tokenURI, tokenId]); // include tokenId to ensure reset when switching
-  
 
-  const handleMint = async () => {
-    if (tokenId === null || tokenId < 0 || !metadata || metadata.price === undefined) return;
-    const priceInWei = metadata?.price || 0n;
-    await mintToken(tokenId, priceInWei);
+  // Update expiration when date/time changes
+  useEffect(() => {
+    if (!inputDate) return;
+  
+    const [year, month, day] = inputDate.split("-").map(Number);
+    const expirationDate = new Date(year, month - 1, day, inputHour, inputMinute, inputSecond);
+    const expirationUnix = Math.floor(expirationDate.getTime() / 1000);
+    setInputExpiration(expirationUnix);
+  }, [inputDate, inputHour, inputMinute, inputSecond]);
+
+  const handlePurchase = async () => {
+    if (tokenId === null || tokenId < 0 || !displayPrice) return;
+    if (!isMinted) {
+      // Mint Token
+      await mintToken(tokenId, displayPrice);
+      return;
+    }
+    if (isListedAndActive) {
+      // Buy Token
+      await buyToken(tokenId, displayPrice);
+      return;
+    }
+  };
+
+  const handleListForSale = async (sellPrice: number, expiration: number) => {
+    const currentUnix = Math.floor(Date.now() / 1000);
+    if (expiration <= currentUnix) {
+      console.warn("Expiration time must be in the future.");
+      return;
+    }
+  
+    const duration = BigInt(expiration - currentUnix);
+    if (tokenId === null || tokenId < 0 || !sellPrice || isListedAndActive || duration <= 0n) return;
+    const setPrice = parseEther(sellPrice.toString());
+    await listToken(tokenId, setPrice, duration);
   };
 
   if (tokenId === null) {
@@ -176,15 +221,11 @@ const MintToken = () => {
     <div className={styles.container}>
       <Navbar />
       <main className={styles.main}>
-        <h1 className={styles.title}>Mint Token</h1>
-
-        {/* <div className={styles.connectButton}>
-          <ConnectButton label="Connect Wallet" accountStatus="address" chainStatus="none" />
-        </div> */}
+        <h1 className={styles.title}>Token Details</h1>
 
         <div className={styles.form}>
           <label className={styles.label}>
-            Token ID:
+            <strong>Token ID:</strong>
             <input
               className={styles.input}
               type="number"
@@ -218,7 +259,7 @@ const MintToken = () => {
                   {/* <p><strong>Attributes:</strong> {metadata.attributes || "None"}</p> */}
                   <p>
                     <strong>Price:</strong> 
-                    {metadata.price !== undefined ? ` ${formatEther(metadata.price)} ${NATIVE_TOKEN}` : " N/A"}
+                    {displayPrice !== undefined ? ` ${formatEther(displayPrice)} ${NATIVE_TOKEN}` : " N/A"}
                   </p>
                 </div>
               ) : (
@@ -229,8 +270,14 @@ const MintToken = () => {
                   </p>
                   <p><strong>Creator:</strong> {metadata.creator}</p>
                   <p>
-                    <strong>Price:</strong> 
-                    {metadata.price !== undefined ? ` ${formatEther(metadata.price)} ${NATIVE_TOKEN}` : " N/A"}
+                    {isMinted ? 
+                      isListedAndActive ? 
+                        <strong>Sale Price:</strong> : 
+                        <strong>Last Sale Price:</strong> 
+                      : 
+                      <strong>Mint Price:</strong> 
+                    }
+                    {displayPrice !== undefined ? ` ${formatEther(displayPrice)} ${NATIVE_TOKEN}` : " N/A"}
                   </p>
                 </div>
               )}
@@ -299,16 +346,132 @@ const MintToken = () => {
 
           <button
             className={styles.button}
-            onClick={handleMint}
-            disabled={isMinted || minting || !metadata || metadata?.price === undefined}
+            onClick={handlePurchase}
+            disabled={
+              isLoading || !metadata || metadata.price === undefined ||
+              (isMinted && (!isListedAndActive || displayPrice === undefined))
+            }
           >
-            {minting ? <Spinner size="sm" color="white" /> : 
-            !isMinted ? "Mint Token" : "Already Minted"}
+            {isLoading ? (
+              <Spinner size="sm" color="white" />
+            ) : !isMinted && displayPrice !== undefined ? (
+              `Mint Token ${formatEther(displayPrice)} ${NATIVE_TOKEN}`
+            ) : isListedAndActive && displayPrice !== undefined ? (
+              `Buy Token ${formatEther(displayPrice)} ${NATIVE_TOKEN}`
+            ) : (
+              "No Active Sale"
+            )}
           </button>
+
+          <br></br>
+          
+          {isTokenOwner ? (
+            <div>
+              <hr></hr>
+              <h1 className={styles.title}>Sell Token</h1>
+              <label className={styles.label}>
+                <strong>Sale Price ({NATIVE_TOKEN}):</strong>
+                <input
+                  className={styles.input}
+                  type="number"
+                  value={inputSalePrice}
+                  onChange={(e) => setInputSalePrice(Number(e.target.value))}
+                  min="0"
+                  step="0.01"
+                />
+              </label>
+              <br></br>
+              <div className={styles.expirationInputs}>
+                <label className={styles.label}>
+                  <strong>Expiration Date:</strong>
+                  <input
+                    className={styles.input}
+                    type="date"
+                    value={inputDate}
+                    onChange={(e) => setInputDate(e.target.value)}
+                  />
+                </label>
+                
+                <div className={styles.digitalClockWrapper}>
+                  <label className={styles.label}>
+                    <strong>Expiration Time:</strong>
+                    <div className={styles.clockInputs}>
+                      <input
+                        className={styles.clockInput}
+                        type="number"
+                        value={inputHour}
+                        onChange={(e) => setInputHour(Number(e.target.value))}
+                        min={0}
+                        max={23}
+                        placeholder="HH"
+                      />
+                      <span>:</span>
+                      <input
+                        className={styles.clockInput}
+                        type="number"
+                        value={inputMinute}
+                        onChange={(e) => setInputMinute(Number(e.target.value))}
+                        min={0}
+                        max={59}
+                        placeholder="MM"
+                      />
+                      <span>:</span>
+                      <input
+                        className={styles.clockInput}
+                        type="number"
+                        value={inputSecond}
+                        onChange={(e) => setInputSecond(Number(e.target.value))}
+                        min={0}
+                        max={59}
+                        placeholder="SS"
+                      />
+                    </div>
+                  </label>
+                </div>
+
+                {inputExpiration > Math.floor(Date.now() / 1000) ? (
+                  <p>
+                    <strong>UNIX:</strong> {inputExpiration}
+                    <br></br>
+                    <br></br>
+                    <strong>Expires At:</strong>{" "}
+                    <br></br>
+                    {new Date(inputExpiration * 1000).toLocaleString(undefined, {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                    })}
+                  </p>
+                ) : (
+                  <p style={{ color: "red" }}><strong>Invalid expiration time (must be in the future)</strong></p>
+                )}
+              </div>
+
+              <br></br>
+
+              <button
+                className={styles.button}
+                onClick={() => handleListForSale(inputSalePrice, inputExpiration)}
+                disabled={
+                  inputExpiration <= now ||
+                  inputSalePrice <= 0 ||
+                  isListedAndActive
+                }
+              >
+                List Token For Sale
+              </button>
+            </div>
+          ) : (
+            <></>
+          )}
+
         </div>
       </main>
     </div>
   );
 };
 
-export default MintToken;
+export default TokenAction;

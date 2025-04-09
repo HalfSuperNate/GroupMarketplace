@@ -144,7 +144,7 @@ export const useFetchGroupOwner = (groupName: string) => {
 
 export const useFetchIsMinted = (tokenId: number | undefined) => {
   if (tokenId === undefined) {
-    return { metadata: null, loading_d: false, error_d: null };
+    return { isMinted: false, loading_d: false, error_d: null };
   }
   const result = useReadContract({
       abi: contractABI,
@@ -155,7 +155,7 @@ export const useFetchIsMinted = (tokenId: number | undefined) => {
 
   // Explicitly type result.data as a boolean
   const isMinted = result.data as
-      boolean  // flag if metadata is false not minted or true is minted
+      boolean
   ;
 
   return {
@@ -201,7 +201,6 @@ export const useFetchListing = (tokenId: number | undefined) => {
     string
   ];
 
-  // Handle the metadata conversion manually
   const listing: Listing | null = fullData
     ? {
         price: BigInt(fullData[0].toString()),
@@ -214,6 +213,28 @@ export const useFetchListing = (tokenId: number | undefined) => {
   return {
       listing,
       loading_f: result.isLoading,
-      error_f: result.isError ? "Failed to fetch is minted flag" : null,
+      error_f: result.isError ? "Failed to fetch listing" : null,
+  };
+};
+
+export const useFetchTokenOwner = (tokenId: number | undefined) => {
+  if (tokenId === undefined) {
+    return { tokenOwner: null, loading_g: false, error_g: null };
+  }
+  const result = useReadContract({
+      abi: contractABI,
+      address: CONTRACT_ADDRESS,
+      functionName: "ownerOf",       // ✅ Ensure you call the correct function
+      args: [tokenId],
+  });
+
+  const tokenOwner = result.data as
+      Address
+  ;
+
+  return {
+      tokenOwner,
+      loading_g: result.isLoading,
+      error_g: result.isError ? "Failed to fetch token owner" : null,
   };
 };

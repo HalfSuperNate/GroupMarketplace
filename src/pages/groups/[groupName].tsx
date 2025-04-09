@@ -41,11 +41,7 @@ const TokenCard = ({ tokenId }: { tokenId: number }) => {
 
     const router = useRouter();
 
-    const goToBuy = (tokenId: number) => {
-        router.push(`/actions/Token?tokenId=${tokenId}`);
-    };
-
-    const goToMint = (tokenId: number) => {
+    const goToToken = (tokenId: number) => {
         router.push(`/actions/Token?tokenId=${tokenId}`);
     };
 
@@ -178,7 +174,7 @@ const TokenCard = ({ tokenId }: { tokenId: number }) => {
     if (!metadata && !jsonData) return null;
 
     return (
-        <div className={styles.groupCard} onClick={() => goToMint(tokenId)}>
+        <div className={styles.groupCard} onClick={() => goToToken(tokenId)}>
             {jsonError && <p className={styles.error}>Error: {jsonError}</p>}
             {(metadata?.image || jsonData?.image) && (
                 <img

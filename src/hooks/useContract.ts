@@ -135,7 +135,7 @@ export const useContract = () => {
 
   // Mint Token
   const mintToken = async (tokenId: number, price: bigint) => {
-
+    if (tokenId === null || price === undefined) return;
     await handleTransaction(
       async () =>
         await writeContract({
@@ -150,9 +150,25 @@ export const useContract = () => {
     );
   };
 
+  // List Token
+  const listToken = async (tokenId: number, price: bigint, duration: bigint) => {
+    if (tokenId === null || price === undefined) return;
+    await handleTransaction(
+      async () =>
+        await writeContract({
+          abi: contractABI,
+          address: CONTRACT_ADDRESS,
+          functionName: "listTokenForSale",
+          args: [tokenId, price, duration],
+        }),
+      "Token listed successfully!",
+      "Failed to list token"
+    );
+  };
+
   // Buy Token
   const buyToken = async (tokenId: number, price: bigint) => {
-
+    if (tokenId === null || price === undefined) return;
     await handleTransaction(
       async () =>
         await writeContract({
@@ -201,6 +217,7 @@ export const useContract = () => {
     loading: loading || isLoading,
     setMetadata,
     mintToken,
+    listToken,
     buyToken,
     cancelListing,
     moveTokenToGroup,
