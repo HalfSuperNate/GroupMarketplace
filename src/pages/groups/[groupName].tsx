@@ -1,7 +1,7 @@
 import { useRouter } from 'next/router';
 import { useState, useEffect } from "react";
 import { NATIVE_TOKEN } from "../../hooks/useContract";
-import { useFetchTokensInGroup, useFetchMetadata, useFetchIsMinted, useFetchTokenUri } from '../../hooks/useReadContract';
+import { useFetchTokensInGroup, useFetchMetadata, useFetchIsMinted, useFetchTokenUri, useFetchListing } from '../../hooks/useReadContract';
 import styles from '../../styles/Home.module.css';
 import Navbar from "@/components/Navbar";
 import { formatEther } from 'viem';
@@ -34,6 +34,13 @@ const TokenCard = ({ tokenId }: { tokenId: number }) => {
     const { metadata } = useFetchMetadata(tokenId);
     const { isMinted } = useFetchIsMinted(tokenId);
     const { tokenURI } = useFetchTokenUri(tokenId);
+    const { listing } = useFetchListing(tokenId);
+
+    const now = Math.floor(Date.now() / 1000); // current Unix timestamp
+    const isListedAndActive = !!(listing?.active && listing.expiration > now);
+    const displayPrice = isMinted ? (isListedAndActive ? listing?.price : "No Active Sale" ) : metadata?.price;
+
+    const [timeLeft, setTimeLeft] = useState("");
 
     const [jsonData, setJsonData] = useState<any>(null);
     const [fetchingJson, setFetchingJson] = useState<boolean>(false);
@@ -166,8 +173,36 @@ const TokenCard = ({ tokenId }: { tokenId: number }) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [metadata?.image, tokenURI]);
 
-    const resolvePrice = (priceIn: bigint | undefined): string => {
-        if (!priceIn) return "";
+    const getTimeLeft = (expiration: number): string => {
+        const now = Math.floor(Date.now() / 1000);
+        const diff = expiration - now;
+        
+        if (diff <= 0) return "Expired";
+        
+        const hours = Math.floor(diff / 3600);
+        const minutes = Math.floor((diff % 3600) / 60);
+        const seconds = diff % 60;
+        
+        return `${hours}h ${minutes}m ${seconds}s`;
+    }; 
+
+    useEffect(() => {
+        if (!isListedAndActive || !listing?.expiration) return;
+        
+        const expiration = parseInt(listing.expiration.toString());
+        
+        const update = () => {
+            setTimeLeft(getTimeLeft(expiration));
+        };
+        
+        update(); // Run once on mount
+        
+        const interval = setInterval(update, 1000);
+        return () => clearInterval(interval);
+    }, [isListedAndActive, listing?.expiration]);
+
+    const resolvePrice = (priceIn: bigint | undefined | string): string => {
+        if (!priceIn || typeof priceIn === "string") return "";
         return formatEther(priceIn);
     };
 
@@ -187,8 +222,14 @@ const TokenCard = ({ tokenId }: { tokenId: number }) => {
             {/* <p>{metadata?.description || jsonData?.description || "No description"}</p> */}
             <p>
                 {isMinted
-                    ? `Already minted`
-                    : `Price: ${resolvePrice(metadata?.price)} ${NATIVE_TOKEN}`}
+                    ? (isListedAndActive 
+                        ? <>
+                            {resolvePrice(displayPrice)} {NATIVE_TOKEN}<br />
+                            {timeLeft}
+                        </>
+                        : displayPrice)
+                    : `Mint: ${resolvePrice(metadata?.price)} ${NATIVE_TOKEN}`
+                }
             </p>
         </div>
     );

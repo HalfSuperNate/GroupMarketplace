@@ -36,7 +36,7 @@ const TokenAction = () => {
   const isTokenOwner = address === tokenOwner || false;
 
   const now = Math.floor(Date.now() / 1000); // current Unix timestamp
-  const isListedAndActive = listing?.active && listing.expiration > now || false;
+  const isListedAndActive = !!(listing?.active && listing.expiration > now);
   const displayPrice = isMinted ? listing?.price : metadata?.price;
 
   const [inputSalePrice, setInputSalePrice] = useState<number>(0);
@@ -45,6 +45,7 @@ const TokenAction = () => {
   const [inputMinute, setInputMinute] = useState<number>(0);
   const [inputSecond, setInputSecond] = useState<number>(0);
   const [inputExpiration, setInputExpiration] = useState<number>(0);
+  const [timeLeft, setTimeLeft] = useState("");
 
   const [jsonData, setJsonData] = useState<any>(null);
   const [fetchingJson, setFetchingJson] = useState<boolean>(false);
@@ -191,6 +192,34 @@ const TokenAction = () => {
     }
   };
 
+  const getTimeLeft = (expiration: number): string => {
+    const now = Math.floor(Date.now() / 1000);
+    const diff = expiration - now;
+  
+    if (diff <= 0) return "Expired";
+  
+    const hours = Math.floor(diff / 3600);
+    const minutes = Math.floor((diff % 3600) / 60);
+    const seconds = diff % 60;
+  
+    return `${hours}h ${minutes}m ${seconds}s`;
+  };  
+
+  useEffect(() => {
+    if (!isListedAndActive || !listing?.expiration) return;
+  
+    const expiration = parseInt(listing.expiration.toString());
+  
+    const update = () => {
+      setTimeLeft(getTimeLeft(expiration));
+    };
+  
+    update(); // Run once on mount
+  
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [isListedAndActive, listing?.expiration]);
+
   const handleListForSale = async (sellPrice: number, expiration: number) => {
     const currentUnix = Math.floor(Date.now() / 1000);
     if (expiration <= currentUnix) {
@@ -251,14 +280,21 @@ const TokenAction = () => {
                     <strong>Metadata:</strong> 
                     <a href={tokenURI} target="_blank" rel="noopener noreferrer">⛓️ On Chain</a>
                   </p>
-                  {/* <p><strong>Name:</strong> {metadata.name}</p> */}
-                  {/* <p><strong>Description:</strong> {metadata.description}</p> */}
                   <p><strong>Creator:</strong> {metadata.creator}</p>
                   <p><strong>Locked:</strong> {metadata.locked ? "Yes" : "No"}</p>
-                  {/* <p><strong>Background:</strong> {metadata.backgroundColor || "N/A"}</p> */}
-                  {/* <p><strong>Attributes:</strong> {metadata.attributes || "None"}</p> */}
                   <p>
-                    <strong>Price:</strong> 
+                    {isMinted ? 
+                      isListedAndActive ? 
+                        <>
+                          <strong>Time Left:</strong> {` ${timeLeft}`}
+                          <br></br>
+                          <strong>Sale Price:</strong>
+                        </>
+                        : 
+                        <strong>Last Sale Price:</strong> 
+                      : 
+                      <strong>Mint Price:</strong> 
+                    }
                     {displayPrice !== undefined ? ` ${formatEther(displayPrice)} ${NATIVE_TOKEN}` : " N/A"}
                   </p>
                 </div>
@@ -272,7 +308,12 @@ const TokenAction = () => {
                   <p>
                     {isMinted ? 
                       isListedAndActive ? 
-                        <strong>Sale Price:</strong> : 
+                        <>
+                          <strong>Sale Expires In:</strong> {` ${timeLeft}`}
+                          <br></br>
+                          <strong>Sale Price:</strong>
+                        </>
+                        :  
                         <strong>Last Sale Price:</strong> 
                       : 
                       <strong>Mint Price:</strong> 
@@ -298,7 +339,7 @@ const TokenAction = () => {
                       src={jsonData.image}
                       alt={jsonData.name}
                       className={styles.image}
-                      style={{ maxWidth: "200px", borderRadius: "8px" }}
+                      style={{ maxWidth: "200px", borderRadius: "2px" }}
                     />
                   </a>
                   <p><strong>Name:</strong> {jsonData.name}</p>
@@ -365,7 +406,7 @@ const TokenAction = () => {
 
           <br></br>
           
-          {isTokenOwner ? (
+          {isTokenOwner && isMinted ? (
             <div>
               <hr></hr>
               <h1 className={styles.title}>Sell Token</h1>
