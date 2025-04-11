@@ -10,10 +10,8 @@ const Navbar = () => {
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (searchGroup.trim() !== '') {
-      router.push(`/groups/${searchGroup.trim()}`);
-      setSearchGroup(''); // Optional: clear after search
-    }
+    router.push(`/groups/${searchGroup.trim()}`);
+    setSearchGroup(''); // Optional: clear after search
   };
 
   return (

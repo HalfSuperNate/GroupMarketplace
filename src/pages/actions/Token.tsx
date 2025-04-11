@@ -3,7 +3,7 @@
 import { useRouter } from 'next/router';
 import { useState, useEffect } from "react";
 import { useContract, NATIVE_TOKEN } from "../../hooks/useContract";
-import { useFetchMetadata, useFetchMetadataSet, useFetchTokenUri, useFetchIsMinted, useFetchListing, useFetchTokenOwner } from "../../hooks/useReadContract";
+import { useFetchMetadata, useFetchMetadataSet, useFetchTokenUri, useFetchIsMinted, useFetchListing, useFetchTokenOwner, useFetchTokenGroup } from "../../hooks/useReadContract";
 // import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Spinner } from "@chakra-ui/react";
 import styles from "../../styles/Home.module.css";
@@ -34,6 +34,7 @@ const TokenAction = () => {
   const { listing, loading_f, error_f } = useFetchListing(tokenId ?? 0);
   const { tokenOwner, loading_g, error_g } = useFetchTokenOwner(tokenId ?? 0);
   const isTokenOwner = address === tokenOwner || false;
+  const { tokenGroup, loading_h, error_h } = useFetchTokenGroup(tokenId ?? 0);
 
   const now = Math.floor(Date.now() / 1000); // current Unix timestamp
   const isListedAndActive = !!(listing?.active && listing.expiration > now);
@@ -276,6 +277,18 @@ const TokenAction = () => {
             <div className={styles.metadata}>
               {onChain ? (
                 <div className={styles.metadata}>
+                  <p>
+                    <strong>Group:</strong>{' '}
+                    <a
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        router.push(`/groups/${tokenGroup.trim()}`);
+                      }}
+                    >
+                      {tokenGroup}
+                    </a>
+                  </p>
                   <p className={styles.truncate}>
                     <strong>Metadata:</strong> 
                     <a href={tokenURI} target="_blank" rel="noopener noreferrer">⛓️ On Chain</a>
@@ -300,6 +313,18 @@ const TokenAction = () => {
                 </div>
               ) : (
                 <div className={styles.metadata}>
+                  <p>
+                    <strong>Group:</strong>{' '}
+                    <a
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        router.push(`/groups/${tokenGroup.trim()}`);
+                      }}
+                    >
+                      {tokenGroup}
+                    </a>
+                  </p>
                   <p className={styles.truncate}>
                     <strong>Metadata:</strong> 
                     <a className={styles.padLink} href={tokenURI} target="_blank" rel="external noopener noreferrer">💾 Off Chain</a>

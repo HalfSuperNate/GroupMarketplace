@@ -238,3 +238,43 @@ export const useFetchTokenOwner = (tokenId: number | undefined) => {
       error_g: result.isError ? "Failed to fetch token owner" : null,
   };
 };
+
+export const useFetchTokenGroup = (tokenId: number | undefined) => {
+  if (tokenId === undefined) {
+    return { tokenGroup: "", loading_h: false, error_h: null };
+  }
+  const result = useReadContract({
+      abi: contractABI,
+      address: CONTRACT_ADDRESS,
+      functionName: "tokenGroup",       // ✅ Ensure you call the correct function
+      args: [tokenId],
+  });
+
+  const tokenGroup = result.data as
+      string
+  ;
+
+  return {
+      tokenGroup,
+      loading_h: result.isLoading,
+      error_h: result.isError ? "Failed to fetch token group" : null,
+  };
+};
+
+export const useFetchNextTokenId = () => {
+  const result = useReadContract({
+      abi: contractABI,
+      address: CONTRACT_ADDRESS,
+      functionName: "nextTokenId",       // ✅ Ensure you call the correct function
+  });
+
+  const nextTokenId = result.data as
+      number
+  ;
+
+  return {
+    nextTokenId,
+      loading_i: result.isLoading,
+      error_i: result.isError ? "Failed to fetch next token ID" : null,
+  };
+};
