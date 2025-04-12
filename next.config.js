@@ -8,6 +8,9 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ["@chakra-ui/react"],
   },
+  images: {
+    domains: ["ipfs.io"],
+  },
 };
 
 module.exports = nextConfig;
