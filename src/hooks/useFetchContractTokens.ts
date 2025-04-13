@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { readContract } from '@wagmi/core';
 import minimalERC721ABI from "../contracts/minimalERC721ABI.json";
-import { getContract } from "viem";
-import { config } from "@/wagmi"; // Adjust path if needed
+import { config } from "@/wagmi";
 
 export const useFetchContractTokens = (
     contractAddress: `0x${string}` | undefined,
@@ -12,60 +11,102 @@ export const useFetchContractTokens = (
     const [tokenData, setTokenData] = useState<any[]>([]);
     const [totalSupply, setTotalSupply] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
+    const [realTokenCount, setRealTokenCount] = useState<number>(0);
 
     useEffect(() => {
         const fetchTokens = async () => {
-            if (!contractAddress) return [];
+            if (!contractAddress) return;
             setLoading(true);
+
+            let estimatedSupply = 0;
+
             try {
-                // Get totalSupply first
+                // Attempt to fetch totalSupply
                 const total = await readContract(config, {
                     address: contractAddress,
                     abi: minimalERC721ABI,
                     functionName: "totalSupply",
                 }) as bigint;
-                setTotalSupply(Number(total));
 
-                const startIndex = page * limit;
-                const endIndex = Math.min(startIndex + limit * 5, Number(total)); // overfetch to skip blanks
-                const results: any[] = [];
+                estimatedSupply = Number(total);
+                setTotalSupply(estimatedSupply);
+            } catch (err) {
+                console.warn("totalSupply() not available, estimating...");
 
-                for (let tokenId = startIndex; tokenId < endIndex && results.length < limit; tokenId++) {
-                    try {
-                        const [tokenURI, tokenOwner] = await Promise.all([
-                            readContract(config, {
-                                address: contractAddress,
-                                abi: minimalERC721ABI,
-                                functionName: "tokenURI",
-                                args: [BigInt(tokenId)],
-                            }),
-                            readContract(config, {
-                                address: contractAddress,
-                                abi: minimalERC721ABI,
-                                functionName: "ownerOf",
-                                args: [BigInt(tokenId)],
-                            }),
-                        ]);
+                // Fallback: estimate totalSupply by probing in chunks
+                const step = 100;
+                let tokenId = 0;
+                let foundTokens = true;
 
-                        if (tokenURI && tokenOwner) {
-                            results.push({
-                                tokenId,
-                                tokenUri: tokenURI,
-                                owner: tokenOwner,
-                            });
-                        }
-                    } catch (e) {
-                        // Token might not exist
-                        console.warn(`Token ${tokenId} fetch failed`, e);
+                while (foundTokens) {
+                    const results = await Promise.all(
+                        Array.from({ length: step }, (_, i) => tokenId + i).map(async (id) => {
+                            try {
+                                await readContract(config, {
+                                    address: contractAddress,
+                                    abi: minimalERC721ABI,
+                                    functionName: "tokenURI",
+                                    args: [BigInt(id)],
+                                });
+                                return true;
+                            } catch {
+                                return false;
+                            }
+                        })
+                    );
+
+                    const validCount = results.filter(Boolean).length;
+                    if (validCount === 0) {
+                        foundTokens = false;
+                    } else {
+                        tokenId += step;
                     }
                 }
 
-                setTokenData(results);
-            } catch (err) {
-                console.error("Failed to fetch totalSupply or token data:", err);
-            } finally {
-                setLoading(false);
+                estimatedSupply = tokenId;
+                // If nothing was found, make sure totalSupply is 0
+                if (estimatedSupply === 0) {
+                    setTokenData([]); // Ensure it's clear
+                }
+                setTotalSupply(estimatedSupply);
             }
+
+            const startIndex = page * limit;
+            const endIndex = Math.min(startIndex + limit * 5, estimatedSupply); // overfetch to skip blanks
+            const results: any[] = [];
+
+            for (let tokenId = startIndex; tokenId < endIndex && results.length < limit; tokenId++) {
+                try {
+                    const [tokenURI, tokenOwner] = await Promise.all([
+                        readContract(config, {
+                            address: contractAddress,
+                            abi: minimalERC721ABI,
+                            functionName: "tokenURI",
+                            args: [BigInt(tokenId)],
+                        }),
+                        readContract(config, {
+                            address: contractAddress,
+                            abi: minimalERC721ABI,
+                            functionName: "ownerOf",
+                            args: [BigInt(tokenId)],
+                        }),
+                    ]);
+
+                    if (tokenURI && tokenOwner) {
+                        results.push({
+                            tokenId,
+                            tokenUri: tokenURI,
+                            owner: tokenOwner,
+                        });
+                    }
+                } catch (e) {
+                    console.warn(`Token ${tokenId} fetch failed`, e);
+                }
+            }
+
+            setTokenData(results);
+            setRealTokenCount(results.length);
+            setLoading(false);
         };
 
         fetchTokens();
@@ -75,5 +116,6 @@ export const useFetchContractTokens = (
         tokenData,
         totalSupply,
         loading,
+        realTokenCount,
     };
 };

@@ -1,9 +1,28 @@
 import { useReadContract } from "wagmi";
+import { config } from '../wagmi';
 import contractABI from "../contracts/GroupMarketplace.json";
 import minimalERC721ABI from "../contracts/minimalERC721ABI.json";
 import { Address } from "viem";
 
-const CONTRACT_ADDRESS = `0x0100a530469DB0Dd44c9Af210A465883668C7797`;
+export const CONTRACT_ADDRESS = `0x0100a530469DB0Dd44c9Af210A465883668C7797`;
+export const CHAIN_ID = config.chains[0].id;
+export const CHAIN_SCANNER = config.chains.at(0)?.blockExplorers.default.url;
+
+export const getOpenSeaAssetURL = (chainId: number) => {
+  switch (chainId) {
+    case 1:
+      return "https://opensea.io/assets/ethereum/";
+    case 137:
+      return "https://opensea.io/assets/matic/";
+    case 80002:
+      return "https://testnets.opensea.io/assets/amoy/";
+    case 11155111:
+      return "https://testnets.opensea.io/assets/sepolia/";
+  
+    default:
+      return "https://opensea.io/assets/ethereum/";
+  }
+};
 
 export interface Metadata {
   name: string;
@@ -117,7 +136,7 @@ export const useGetTotalSupply = (contractAddress: Address) => {
   const totalSupply = result.data as
     number
     ;
-    
+
   return {
     totalSupply,
     loading: result.isLoading,

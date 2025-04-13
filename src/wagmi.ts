@@ -1,5 +1,5 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
-import { http, createConfig } from '@wagmi/core'
+//import { http, createConfig } from '@wagmi/core'
 import {
   //arbitrum,
   //base,

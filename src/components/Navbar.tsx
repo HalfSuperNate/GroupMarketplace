@@ -3,15 +3,31 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import styles from '../styles/Home.module.css';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { CONTRACT_ADDRESS, CHAIN_SCANNER } from '@/hooks/useReadContract';
 
 const Navbar = () => {
-  const [searchGroup, setSearchGroup] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
 
-  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSearch = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    router.push(`/groups/${searchGroup.trim()}`);
-    setSearchGroup(''); // Optional: clear after search
+    const query = searchQuery.trim();
+    if (!query) return;
+  
+    try {
+      const res = await fetch(`/api/groupExists?name=${query}`);
+      const data = await res.json();
+  
+      if (data.exists) {
+        router.push(`/groups/${query}`);
+      } else {
+        router.push(`/contract/${query}`);
+      }
+    } catch (err) {
+      console.error('Search failed', err);
+    }
+  
+    setSearchQuery('');
   };
 
   return (
@@ -22,7 +38,7 @@ const Navbar = () => {
         <li><Link href="/actions/Token?tokenId=0">Search Token</Link></li>
         <li>
           <Link
-            href="https://amoy.polygonscan.com/address/0x0100a530469db0dd44c9af210a465883668c7797"
+            href={`${CHAIN_SCANNER}/address/${CONTRACT_ADDRESS}`}
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -33,9 +49,9 @@ const Navbar = () => {
           <form onSubmit={handleSearch} className={styles.searchForm}>
             <input
               type="text"
-              value={searchGroup}
-              onChange={(e) => setSearchGroup(e.target.value)}
-              placeholder="Search group..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search group or contract..."
               className={styles.searchInput}
             />
             <button type="submit" className={styles.searchButton}>⏎</button>

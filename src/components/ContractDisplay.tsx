@@ -1,6 +1,6 @@
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
-import { useGetName, useGetSymbol, useGetTotalSupply } from "@/hooks/useReadContract"; // adjust path if needed
+import { useGetName, useGetSymbol, CHAIN_ID, CHAIN_SCANNER, getOpenSeaAssetURL } from "@/hooks/useReadContract"; // adjust path if needed
 import styles from '../styles/Home.module.css'; // reuse your existing grid/card styles
 import Navbar from "@/components/Navbar";
 import Image from "next/image";
@@ -18,33 +18,53 @@ const ContractDisplay = () => {
 
   const { contractName } = useGetName(contractAddress);
   const { contractSymbol } = useGetSymbol(contractAddress);
-  //const { totalSupply } = useGetTotalSupply(contractAddress);
 
   const ITEMS_PER_PAGE = 20;
   const [page, setPage] = useState(0);
 
-  const { tokenData, totalSupply, loading } = useFetchContractTokens(contractAddress, page, ITEMS_PER_PAGE);
-  console.log(totalSupply);
-  const totalPages = totalSupply ? Math.ceil(Number(totalSupply) / ITEMS_PER_PAGE) : 0;
-
-  const paginatedData = tokenData.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE);
+  const { tokenData, totalSupply, loading, realTokenCount } = useFetchContractTokens(contractAddress, page, ITEMS_PER_PAGE);
+  //console.log(totalSupply);
+  {!loading && tokenData.length === 0 && (
+    <div>No tokens found for this contract.</div>
+  )}
+  
+  const totalPages = Math.ceil(realTokenCount / ITEMS_PER_PAGE);
 
   const handlePrev = () => setPage((prev) => Math.max(prev - 1, 0));
   const handleNext = () => setPage((prev) => Math.min(prev + 1, totalPages - 1));
 
+  useEffect(() => {
+    if (!loading && tokenData.length === 0 && page > 0) {
+      setPage(prev => Math.max(0, prev - 1));
+    }
+  }, [tokenData, loading]);
+
+  const goToTokenPage = (tokenId: number) => {
+    const url = `${getOpenSeaAssetURL(CHAIN_ID)}${contractAddress}/${tokenId}`;
+    window.open(url, "_blank");
+  };
+
+  const goToContractPage = () => {
+    const url = `${CHAIN_SCANNER}/address/${contractAddress}`;
+    window.open(url, "_blank");
+  };
+  
   return (
     <div className={styles.container}>
       <Navbar />
-      <h1 className={styles.title}>
+      <h1 className={styles.groupHeading}>
         {contractName ? `${contractName} (${contractSymbol})` : "Loading Contract Info..."}
+        <p className={styles.groupHeadingSmallLink} onClick={() => goToContractPage()}>Contract: {contractAddress}</p>
       </h1>
-
+  
       {loading ? (
         <p>Loading tokens...</p>
+      ) : tokenData.length === 0 ? (
+        <div>No tokens found for this contract.</div>
       ) : (
-        <div className={styles.grid}>
+        <div className={styles.groupGrid}>
           {tokenData.map(({ tokenId, tokenUri, owner }) => (
-            <div key={tokenId} className={styles.card}>
+            <div key={tokenId} className={styles.groupCard} onClick={() => goToTokenPage(tokenId)}>
               <p className={styles.tokenId}>ID #{tokenId}</p>
               <TokenMetadataDisplay tokenURI={tokenUri} />
               <p className={styles.owner}>Owner: {shortenAddress(owner)}</p>
@@ -52,15 +72,22 @@ const ContractDisplay = () => {
           ))}
         </div>
       )}
-
+  
       {/* Pagination Controls */}
-      <div className={styles.pagination}>
-        <button onClick={handlePrev} disabled={page === 0}>← Prev</button>
-        <span>Page {page + 1} of {totalPages}</span>
-        <button onClick={handleNext} disabled={page + 1 >= totalPages}>Next →</button>
-      </div>
+      {totalPages > 0 && tokenData.length > 0 && (
+        <div className={styles.pagination}>
+          <button onClick={handlePrev} disabled={page === 0}>← Prev</button>
+          <span>Page {page + 1}</span>
+          <button
+            onClick={handleNext}
+            disabled={loading || tokenData.length < ITEMS_PER_PAGE}
+          >
+            Next →
+          </button>
+        </div>
+      )}
     </div>
-  );
+  );  
 };
 
 export default ContractDisplay;

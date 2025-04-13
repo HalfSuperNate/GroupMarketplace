@@ -260,6 +260,11 @@
   margin-bottom: 1rem;
 }
 
+.groupHeadingSmallLink {
+  font-size: 1rem;
+  cursor: pointer;
+}
+
 .groupGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
