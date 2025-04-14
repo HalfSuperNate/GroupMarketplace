@@ -1,6 +1,6 @@
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
-import { useGetName, useGetSymbol, CHAIN_ID, CHAIN_SCANNER, getOpenSeaAssetURL } from "@/hooks/useReadContract"; // adjust path if needed
+import { useGetName, useGetSymbol, CHAIN_ID, CHAIN_SCANNER, getMarketplaceAssetURL } from "@/hooks/useReadContract"; // adjust path if needed
 import styles from '../styles/Home.module.css'; // reuse your existing grid/card styles
 import Navbar from "@/components/Navbar";
 import Image from "next/image";
@@ -39,8 +39,8 @@ const ContractDisplay = () => {
     }
   }, [tokenData, loading]);
 
-  const goToTokenPage = (tokenId: number) => {
-    const url = `${getOpenSeaAssetURL(CHAIN_ID)}${contractAddress}/${tokenId}`;
+  const goToTokenPage = (marketplace: string, tokenId: number) => {
+    const url = getMarketplaceAssetURL(marketplace, CHAIN_ID, contractAddress, tokenId);
     window.open(url, "_blank");
   };
 
@@ -64,10 +64,37 @@ const ContractDisplay = () => {
       ) : (
         <div className={styles.groupGrid}>
           {tokenData.map(({ tokenId, tokenUri, owner }) => (
-            <div key={tokenId} className={styles.groupCard} onClick={() => goToTokenPage(tokenId)}>
+            <div key={tokenId} className={styles.groupContractCard}>
               <p className={styles.tokenId}>ID #{tokenId}</p>
               <TokenMetadataDisplay tokenURI={tokenUri} />
               <p className={styles.owner}>Owner: {shortenAddress(owner)}</p>
+
+              <div className={styles.marketLinks}>
+                <button
+                  onClick={() => goToTokenPage("opensea", tokenId)}
+                  title="OpenSea"
+                >
+                  <Image src="/opensea.svg" alt="OpenSea" width={24} height={24} />
+                </button>
+                <button
+                  onClick={() => goToTokenPage("rarible", tokenId)}
+                  title="Rarible"
+                >
+                  <Image src="/rarible.svg" alt="Rarible" width={24} height={24} />
+                </button>
+                <button
+                  onClick={() => goToTokenPage("looksrare", tokenId)}
+                  title="LooksRare"
+                >
+                  <Image src="/looksrare.svg" alt="LooksRare" width={24} height={24} />
+                </button>
+                <button
+                  onClick={() => goToTokenPage("magiceden", tokenId)}
+                  title="Magic Eden"
+                >
+                  <Image src="/magiceden.svg" alt="Magic Eden" width={24} height={24} />
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -224,9 +251,10 @@ const TokenMetadataDisplay = ({ tokenURI }: { tokenURI: string }) => {
   if (!jsonData) return <p>Loading metadata...</p>;
 
   return (
-    <div>
+    <div className={styles.groupImageContainer}>
       {jsonData.image && (
         <Image
+          className={styles.groupImage}
           src={jsonData.image.replace("ipfs://", "https://ipfs.io/ipfs/")}
           alt={jsonData.name || "Token Image"}
           width={200}

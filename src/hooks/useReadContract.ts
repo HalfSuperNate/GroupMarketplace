@@ -8,19 +8,73 @@ export const CONTRACT_ADDRESS = `0x0100a530469DB0Dd44c9Af210A465883668C7797`;
 export const CHAIN_ID = config.chains[0].id;
 export const CHAIN_SCANNER = config.chains.at(0)?.blockExplorers.default.url;
 
-export const getOpenSeaAssetURL = (chainId: number) => {
-  switch (chainId) {
-    case 1:
-      return "https://opensea.io/assets/ethereum/";
-    case 137:
-      return "https://opensea.io/assets/matic/";
-    case 80002:
-      return "https://testnets.opensea.io/assets/amoy/";
-    case 11155111:
-      return "https://testnets.opensea.io/assets/sepolia/";
-  
+export const getMarketplaceAssetURL = (marketplace: string, chainId: number, contractAddress: Address, tokenId: number) => {
+  switch (marketplace) {
+    case 'opensea':
+      switch (chainId) {
+        case 1:
+          return `https://opensea.io/assets/ethereum/${contractAddress}/${tokenId}`;
+        case 137:
+          return `https://opensea.io/assets/matic/${contractAddress}/${tokenId}`;
+        case 80002:
+          return `https://testnets.opensea.io/assets/amoy/${contractAddress}/${tokenId}`;
+        case 11155111:
+          return `https://testnets.opensea.io/assets/sepolia/${contractAddress}/${tokenId}`;
+        default:
+          return `https://opensea.io/assets/ethereum/${contractAddress}/${tokenId}`;
+      }
+    case 'magiceden':
+      switch (chainId) {
+        case 1:
+          return `https://magiceden.us/item-details/ethereum/${contractAddress}/${tokenId}`;
+        case 137:
+          return `https://magiceden.us/item-details/polygon/${contractAddress}/${tokenId}`;
+        case 80002:
+          return `#`;
+        case 11155111:
+          return `#`;
+        default:
+          return `https://magiceden.us/item-details/ethereum/${contractAddress}/${tokenId}`;
+      }
+    case 'rarible':
+      switch (chainId) {
+        case 1:
+          return `https://rarible.com/token/${contractAddress}:${tokenId}`;
+        case 137:
+          return `https://rarible.com/token/polygon/${contractAddress}:${tokenId}`;
+        case 80002:
+          return `https://testnet.rarible.com/token/polygon/${contractAddress}:${tokenId}`;
+        case 11155111:
+          return `https://testnet.rarible.com/token/${contractAddress}:${tokenId}`;
+        default:
+          return `https://rarible.com/token/${contractAddress}:${tokenId}`;
+      }
+    case 'looksrare':
+      switch (chainId) {
+        case 1:
+          return `https://looksrare.org/collections/${contractAddress}/${tokenId}`;
+        case 137:
+          return `#`;
+        case 80002:
+          return `#`;
+        case 11155111:
+          return `#`;
+        default:
+          return `https://looksrare.org/collections/${contractAddress}/${tokenId}`;
+      }
     default:
-      return "https://opensea.io/assets/ethereum/";
+      switch (chainId) {
+        case 1:
+          return `https://opensea.io/assets/ethereum/${contractAddress}/${tokenId}`;
+        case 137:
+          return `https://opensea.io/assets/matic/${contractAddress}/${tokenId}`;
+        case 80002:
+          return `https://testnets.opensea.io/assets/amoy/${contractAddress}/${tokenId}`;
+        case 11155111:
+          return `https://testnets.opensea.io/assets/sepolia/${contractAddress}/${tokenId}`;
+        default:
+          return `https://opensea.io/assets/ethereum/${contractAddress}/${tokenId}`;
+      }
   }
 };
 
