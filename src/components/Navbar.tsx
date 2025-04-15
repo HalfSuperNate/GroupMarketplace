@@ -12,7 +12,10 @@ const Navbar = () => {
   const handleSearch = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const query = searchQuery.trim();
-    if (!query) return;
+    if (!query) {
+      router.push(`/groups/`);
+      return;
+    }
   
     try {
       const res = await fetch(`/api/groupExists?name=${query}`);

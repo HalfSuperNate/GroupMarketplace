@@ -452,3 +452,21 @@ export const useFetchNextTokenId = () => {
     error_i: result.isError ? "Failed to fetch next token ID" : null,
   };
 };
+
+export const useFetchNewGroupPrice = () => {
+  const result = useReadContract({
+    abi: contractABI,
+    address: CONTRACT_ADDRESS,
+    functionName: "newGroupFee",       // ✅ Ensure you call the correct function
+  });
+
+  const newGroupFee = result.data as
+    bigint
+    ;
+
+  return {
+    newGroupFee,
+    loading_j: result.isLoading,
+    error_j: result.isError ? "Failed to fetch new group fee" : null,
+  };
+};

@@ -102,6 +102,22 @@ const SetMetadata = () => {
   };
 
   const handleCheckGroup = () => {
+    // If the groupName is an address (starts with "0x")
+    if (groupName.startsWith("0x")) {
+      if (groupName.toLowerCase() === address?.toLowerCase()) {
+        setIsGroupAvailable(true);
+        setIsOwned(true);
+        setMetadataInput((prev) => ({
+          ...prev,
+          group: groupName,
+        }));
+      } else {
+        // An address, but not the user's
+        setIsGroupAvailable(false);
+        setIsOwned(false);
+      }
+      return; // Skip further groupOwner logic
+    }
     // Check if the group is available by the contract check
     if (groupOwner === '0x0000000000000000000000000000000000000000') {
       setIsGroupAvailable(true);
@@ -368,7 +384,7 @@ const SetMetadata = () => {
                 <p>✅ The group name is available!</p>
               )
             ) : (
-              <p>❌ The group name is taken.</p>
+              <p>❌ The group name is taken or invalid.</p>
             )}
 
             <button 

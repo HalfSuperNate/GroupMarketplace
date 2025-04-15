@@ -37,7 +37,7 @@ const GroupDisplay = ({ groupName }: { groupName?: string }) => {
         <div className={styles.container}>
             <Navbar />
             <h1 className={styles.groupHeading}>
-                {showRandom ? "Random Tokens" : groupName}
+                {showRandom ? "Random Group Marketplace Tokens" : groupName}
             </h1>
             <div className={styles.groupGrid}>
                 {(showRandom ? randomTokenIds : tokenIds)?.map((tokenId) => (

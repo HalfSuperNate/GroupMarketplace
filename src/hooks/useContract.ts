@@ -199,7 +199,7 @@ export const useContract = () => {
   };
 
   // Move Token to Group
-  const moveTokenToGroup = async (tokenId: number, newGroup: string) => {
+  const moveTokenToGroup = async (tokenId: number, newGroup: string, price: bigint) => {
     await handleTransaction(
       async () =>
         await writeContract({
@@ -207,6 +207,7 @@ export const useContract = () => {
           address: CONTRACT_ADDRESS,
           functionName: "moveTokenToGroup",
           args: [tokenId, newGroup],
+          value: price,
         }),
       "Token moved to new group successfully!",
       "Failed to move token to group"

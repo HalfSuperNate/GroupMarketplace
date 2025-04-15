@@ -3,7 +3,7 @@
 import { useRouter } from 'next/router';
 import { useState, useEffect } from "react";
 import { useContract, NATIVE_TOKEN } from "../../hooks/useContract";
-import { useFetchMetadata, useFetchMetadataSet, useFetchTokenUri, useFetchIsMinted, useFetchListing, useFetchTokenOwner, useFetchTokenGroup } from "../../hooks/useReadContract";
+import { useFetchMetadata, useFetchMetadataSet, useFetchTokenUri, useFetchIsMinted, useFetchListing, useFetchTokenOwner, useFetchTokenGroup, useFetchGroupOwner, useFetchNewGroupPrice } from "../../hooks/useReadContract";
 // import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Spinner } from "@chakra-ui/react";
 import styles from "../../styles/Home.module.css";
@@ -13,7 +13,7 @@ import { useAccount } from "wagmi";
 
 const TokenAction = () => {
   const { address } = useAccount();
-  const { mintToken, listToken, buyToken, loading: isLoading } = useContract();
+  const { mintToken, listToken, buyToken, moveTokenToGroup, loading: isLoading } = useContract();
   const router = useRouter();
   const [tokenId, setTokenId] = useState<number | null>(null);
 
@@ -34,11 +34,15 @@ const TokenAction = () => {
   const { listing, loading_f, error_f } = useFetchListing(tokenId ?? 0);
   const { tokenOwner, loading_g, error_g } = useFetchTokenOwner(tokenId ?? 0);
   const isTokenOwner = address === tokenOwner || false;
+  const isTokenCreator = address === metadata?.creator || false;
+  const isLocked = metadata?.locked || false;
   const { tokenGroup, loading_h, error_h } = useFetchTokenGroup(tokenId ?? 0);
 
   const now = Math.floor(Date.now() / 1000); // current Unix timestamp
   const isListedAndActive = !!(listing?.active && listing.expiration > now);
   const displayPrice = isMinted ? listing?.price : metadata?.price;
+
+  const { newGroupFee, loading_j, error_j } = useFetchNewGroupPrice();
 
   const [inputSalePrice, setInputSalePrice] = useState<number>(0);
   const [inputDate, setInputDate] = useState<string>("");
@@ -51,6 +55,59 @@ const TokenAction = () => {
   const [jsonData, setJsonData] = useState<any>(null);
   const [fetchingJson, setFetchingJson] = useState<boolean>(false);
   const [jsonError, setJsonError] = useState<string | null>(null);
+
+  const [groupName, setGroupName] = useState('');
+  const [isGroupAvailable, setIsGroupAvailable] = useState<boolean | null>(null);
+  const [ownedGroup, setIsOwned] = useState<boolean | null>(null);
+  // Destructure the result from the useFetchGroupOwner hook
+  const { groupOwner, loading_c, error_c } = useFetchGroupOwner(groupName);
+
+  const handleGroupChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setGroupName(e.target.value);
+    setIsGroupAvailable(null);
+  };
+
+  const handleCheckGroup = () => {
+    // If the groupName is an address (starts with "0x")
+    if (groupName.startsWith("0x") || groupName.startsWith("0X")) {
+      if (groupName.toLowerCase() === address?.toLowerCase()) {
+        setIsGroupAvailable(true);
+        setIsOwned(true);
+      } else {
+        // An address, but not the user's
+        setIsGroupAvailable(false);
+        setIsOwned(false);
+      }
+      return; // Skip further groupOwner logic
+    }
+    // Check if the group is available by the contract check
+    if (groupOwner === '0x0000000000000000000000000000000000000000') {
+      setIsGroupAvailable(true);
+      setIsOwned(false);
+    } else if (groupOwner === address) {  // Compare groupOwner with the user's address
+      setIsGroupAvailable(true);
+      setIsOwned(true);
+    } else {
+      setIsGroupAvailable(false);
+      setIsOwned(false);
+    }
+  };
+
+  // ✅ Handle submit move token
+  const handleSubmitMoveToken = async () => {
+    if (tokenId === null || groupName === '') return;
+    let price = 0n;
+
+    if (isGroupAvailable && !ownedGroup) {
+      price = newGroupFee;
+    }
+  
+    await moveTokenToGroup(
+      tokenId, 
+      groupName, 
+      price,                                         
+    );
+  };
 
   // ✅ Improved Base64 decoding with padding and error handling
   const decodeBase64Json = (base64: string): any | null => {
@@ -273,7 +330,7 @@ const TokenAction = () => {
             </div>
           ) : error ? (
             <p className={styles.warning}>Error: {error}</p>
-          ) : metadata ? (
+          ) : metadata  && tokenURI ? (
             <div className={styles.metadata}>
               {onChain ? (
                 <div className={styles.metadata}>
@@ -410,6 +467,7 @@ const TokenAction = () => {
             <p>No metadata found for ID: {tokenId}</p>
           )}
 
+          {/* ✅ Display Minting or Buying button */}
           <button
             className={styles.button}
             onClick={handlePurchase}
@@ -431,6 +489,7 @@ const TokenAction = () => {
 
           <br></br>
           
+          {/* ✅ Display Listing Options if token owner */}
           {isTokenOwner && isMinted ? (
             <div>
               <hr></hr>
@@ -528,6 +587,52 @@ const TokenAction = () => {
                 }
               >
                 List Token For Sale
+              </button>
+            </div>
+          ) : (
+            <></>
+          )}
+
+          {/* ✅ Display Move token to group options */}
+          {isTokenCreator && !isLocked ? (
+            <div>
+              <hr></hr>
+              <h1 className={styles.title}>Move Token To Group</h1>
+              <label className={styles.label}>
+                Group (existing or new):
+                <input
+                  className={styles.input}
+                  name="group"
+                  value={groupName}
+                  onChange={handleGroupChange}
+                />
+              </label>
+
+              {/* Conditional rendering based on the group availability status */}
+              {loading_c && <p>Loading...</p>}
+              {error_c && <p style={{ color: 'red' }}>{error_c}</p>}
+              {isGroupAvailable === null ? (
+                <p>Please check if the group is available.</p>
+              ) : isGroupAvailable ? (
+                ownedGroup ? (
+                  <p>✅ You Own This Group!</p>
+                ) : (
+                  <p>✅ The group name is available!</p>
+                )
+              ) : (
+                <p>❌ The group name is taken or invalid.</p>
+              )}
+
+              <button 
+                className={styles.attributesButton}
+                type="button" 
+                onClick={handleCheckGroup} 
+                disabled={!groupName} // Disable if group name is empty
+              >
+                Check Group
+              </button>
+              <button className={styles.button} onClick={handleSubmitMoveToken} disabled={loading || !isGroupAvailable}>
+                {loading ? <Spinner size="sm" color="white" /> : "Move Token"}
               </button>
             </div>
           ) : (
