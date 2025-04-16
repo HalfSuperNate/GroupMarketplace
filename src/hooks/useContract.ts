@@ -190,7 +190,7 @@ export const useContract = () => {
         await writeContract({
           abi: contractABI,
           address: CONTRACT_ADDRESS,
-          functionName: "cancelListing",
+          functionName: "cancelTokenListing",
           args: [tokenId],
         }),
       "Listing canceled successfully!",

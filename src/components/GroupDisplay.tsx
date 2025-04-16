@@ -228,16 +228,40 @@ const TokenCard = ({ tokenId }: { tokenId: number }) => {
 
     if (!metadata && !jsonData) return null;
 
+    const getFinalImageSrc = () => {
+        if (metadata && metadata.image) {
+            return resolveIPFS(metadata.image);
+        }
+        if (jsonData && jsonData.image) {
+            return resolveIPFS(jsonData.image);
+        }
+
+        return "/default-image.svg";
+    }
+
+    // 🔳 TO DO: if group owner is on this page give the option to:
+
+    // trigger function: setGroupURI(groupName, [p, 0|1, s])
+    // user input: [prefix, appendNum 0=N 1=Y, suffix]
+
+    // trigger function: setCreatorFee(groupName, creatorFee)
+    // user input: number less than creatorFeeMax
+
+    // updateGroupOwner
+
+    // updateGroupRestrictions
+
     return (
         <div className={styles.groupCard} onClick={() => goToToken(tokenId)}>
+            <img
+                src={getFinalImageSrc()}
+                alt={metadata?.name || jsonData?.name || ``}
+                className={styles.groupImage}
+                onError={(e) => {
+                    (e.target as HTMLImageElement).src = "/default-image.svg"; // Fallback if URL fails
+                }}
+            />
             {jsonError && <p className={styles.error}>Error: {jsonError}</p>}
-            {(metadata?.image || jsonData?.image) && (
-                <img
-                    src={resolveIPFS(metadata?.image || jsonData?.image)}
-                    alt={metadata?.name || jsonData?.name || `Token #${tokenId}`}
-                    className={styles.groupImage}
-                />
-            )}
             <h2>{metadata?.name || jsonData?.name || `Token #${tokenId}`}</h2>
             {/* <p>{metadata?.description || jsonData?.description || "No description"}</p> */}
             <p>

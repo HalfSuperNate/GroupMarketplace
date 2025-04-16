@@ -13,7 +13,7 @@ import { useAccount } from "wagmi";
 
 const TokenAction = () => {
   const { address } = useAccount();
-  const { mintToken, listToken, buyToken, moveTokenToGroup, loading: isLoading } = useContract();
+  const { mintToken, listToken, cancelListing, buyToken, moveTokenToGroup, loading: isLoading } = useContract();
   const router = useRouter();
   const [tokenId, setTokenId] = useState<number | null>(null);
 
@@ -236,6 +236,14 @@ const TokenAction = () => {
     setInputExpiration(expirationUnix);
   }, [inputDate, inputHour, inputMinute, inputSecond]);
 
+  const handleCancel = async () => {
+    if (tokenId === null || tokenId < 0 || !isListedAndActive) return;
+
+    // Cancel Sale
+    await cancelListing(tokenId);
+    return;
+  };
+
   const handlePurchase = async () => {
     if (tokenId === null || tokenId < 0 || !displayPrice) return;
     if (!isMinted) {
@@ -361,11 +369,14 @@ const TokenAction = () => {
                           <strong>Sale Price:</strong>
                         </>
                         : 
-                        <strong>Last Sale Price:</strong> 
+                        displayPrice !== undefined && displayPrice > 0 ? 
+                        <strong>Last Price:</strong>
+                        :
+                        <></>
                       : 
                       <strong>Mint Price:</strong> 
                     }
-                    {displayPrice !== undefined ? ` ${formatEther(displayPrice)} ${NATIVE_TOKEN}` : " N/A"}
+                    {displayPrice !== undefined && displayPrice > 0 ? ` ${formatEther(displayPrice)} ${NATIVE_TOKEN}` : ""}
                   </p>
                 </div>
               ) : (
@@ -396,11 +407,14 @@ const TokenAction = () => {
                           <strong>Sale Price:</strong>
                         </>
                         :  
-                        <strong>Last Sale Price:</strong> 
+                        displayPrice !== undefined && displayPrice > 0 ? 
+                        <strong>Last Price:</strong>
+                        :
+                        <></>
                       : 
                       <strong>Mint Price:</strong> 
                     }
-                    {displayPrice !== undefined ? ` ${formatEther(displayPrice)} ${NATIVE_TOKEN}` : " N/A"}
+                    {displayPrice !== undefined && displayPrice > 0 ? ` ${formatEther(displayPrice)} ${NATIVE_TOKEN}` : ""}
                   </p>
                 </div>
               )}
@@ -412,13 +426,21 @@ const TokenAction = () => {
                   <p>Loading JSON metadata...</p>
                 </div>
               ) : jsonError ? (
-                <p className={styles.warning}>Error: {jsonError}</p>
+                <div>
+                  <p className={styles.warning}>Error: {jsonError}</p>
+                  <img
+                    src={"/default-image.svg"}
+                    alt={"error"}
+                    className={styles.image}
+                    style={{ maxWidth: "200px", borderRadius: "2px" }}
+                  />
+                </div>
               ) : jsonData ? (
                 <div className={styles.jsonData}>
                   <h3>📝 JSON Metadata</h3>
                   <a href={jsonData.image} target="_blank" rel="noopener noreferrer">
                     <img
-                      src={jsonData.image}
+                      src={jsonData.image ? jsonData.image : "/default-image.svg"}
                       alt={jsonData.name}
                       className={styles.image}
                       style={{ maxWidth: "200px", borderRadius: "2px" }}
@@ -487,11 +509,34 @@ const TokenAction = () => {
             )}
           </button>
 
-          <br></br>
+          {/* ✅ Display Cancel Listing Options if token owner */}
+          {isTokenOwner && isListedAndActive ? (
+            <div className={styles.form}>
+              <hr></hr>
+              <h1 className={styles.title}>Cancel Sale</h1>
+              <button
+                className={styles.button}
+                onClick={handleCancel}
+                disabled={
+                  isLoading || !isListedAndActive
+                }
+              >
+                {isLoading ? (
+                  <Spinner size="sm" color="white" />
+                ) : isListedAndActive ? (
+                  `Cancel Sale`
+                ) : (
+                  "No Active Sale"
+                )}
+              </button>
+            </div>
+          ) : (
+            <></>
+          )}
           
           {/* ✅ Display Listing Options if token owner */}
           {isTokenOwner && isMinted ? (
-            <div>
+            <div className={styles.form}>
               <hr></hr>
               <h1 className={styles.title}>Sell Token</h1>
               <label className={styles.label}>
@@ -505,7 +550,6 @@ const TokenAction = () => {
                   step="0.01"
                 />
               </label>
-              <br></br>
               <div className={styles.expirationInputs}>
                 <label className={styles.label}>
                   <strong>Expiration Date:</strong>
@@ -575,8 +619,6 @@ const TokenAction = () => {
                 )}
               </div>
 
-              <br></br>
-
               <button
                 className={styles.button}
                 onClick={() => handleListForSale(inputSalePrice, inputExpiration)}
@@ -595,7 +637,7 @@ const TokenAction = () => {
 
           {/* ✅ Display Move token to group options */}
           {isTokenCreator && !isLocked ? (
-            <div>
+            <div className={styles.form}>
               <hr></hr>
               <h1 className={styles.title}>Move Token To Group</h1>
               <label className={styles.label}>
