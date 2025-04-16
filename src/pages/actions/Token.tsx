@@ -436,14 +436,14 @@ const TokenAction = () => {
                   />
                 </div>
               ) : jsonData ? (
-                <div className={styles.jsonData}>
+                <div className={styles.groupImageContainer}>
                   <h3>📝 JSON Metadata</h3>
                   <a href={jsonData.image} target="_blank" rel="noopener noreferrer">
                     <img
                       src={jsonData.image ? jsonData.image : "/default-image.svg"}
                       alt={jsonData.name}
-                      className={styles.image}
-                      style={{ maxWidth: "200px", borderRadius: "2px" }}
+                      className={styles.groupImage}
+                      style={{ maxWidth: "200px" }}
                     />
                   </a>
                   <p><strong>Name:</strong> {jsonData.name}</p>
