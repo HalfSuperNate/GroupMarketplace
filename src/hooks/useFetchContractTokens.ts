@@ -12,6 +12,7 @@ export const useFetchContractTokens = (
     const [totalSupply, setTotalSupply] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
     const [realTokenCount, setRealTokenCount] = useState<number>(0);
+    const [hasMore, setHasMore] = useState(false);
 
     useEffect(() => {
         const fetchTokens = async () => {
@@ -105,7 +106,8 @@ export const useFetchContractTokens = (
             }
 
             setTokenData(results);
-            setRealTokenCount(results.length);
+            setRealTokenCount(estimatedSupply);
+            setHasMore(endIndex < estimatedSupply);
             setLoading(false);
         };
 
@@ -117,5 +119,6 @@ export const useFetchContractTokens = (
         totalSupply,
         loading,
         realTokenCount,
+        hasMore,
     };
 };

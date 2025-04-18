@@ -22,7 +22,7 @@ const ContractDisplay = () => {
   const ITEMS_PER_PAGE = 20;
   const [page, setPage] = useState(0);
 
-  const { tokenData, totalSupply, loading, realTokenCount } = useFetchContractTokens(contractAddress, page, ITEMS_PER_PAGE);
+  const { tokenData, totalSupply, loading, realTokenCount, hasMore } = useFetchContractTokens(contractAddress, page, ITEMS_PER_PAGE);
   //console.log(totalSupply);
   {!loading && tokenData.length === 0 && (
     <div>No tokens found for this contract.</div>
@@ -31,7 +31,10 @@ const ContractDisplay = () => {
   const totalPages = Math.ceil(realTokenCount / ITEMS_PER_PAGE);
 
   const handlePrev = () => setPage((prev) => Math.max(prev - 1, 0));
-  const handleNext = () => setPage((prev) => Math.min(prev + 1, totalPages - 1));
+  const handleNext = () => {
+    console.log("Current page:", page, "Total pages:", totalPages);
+    setPage((prev) => Math.min(prev + 1, totalPages - 1));
+  };
 
   useEffect(() => {
     if (!loading && tokenData.length === 0 && page > 0) {
@@ -48,6 +51,9 @@ const ContractDisplay = () => {
     const url = `${CHAIN_SCANNER}/address/${contractAddress}`;
     window.open(url, "_blank");
   };
+
+  // console.log("Estimated supply:", realTokenCount);
+  // console.log("Current page:", page, "Total pages:", totalPages);
   
   return (
     <div className={styles.container}>
@@ -101,18 +107,25 @@ const ContractDisplay = () => {
       )}
   
       {/* Pagination Controls */}
-      {totalPages > 0 && tokenData.length > 0 && (
+      {totalPages > 1 && tokenData.length > 0 && (
         <div className={styles.pagination}>
-          <button onClick={handlePrev} disabled={page === 0}>← Prev</button>
+          {page > 0 && (
+            <button onClick={handlePrev}>
+              ← Prev
+            </button>
+          )}
           <span>Page {page + 1}</span>
-          <button
-            onClick={handleNext}
-            disabled={loading || tokenData.length < ITEMS_PER_PAGE}
-          >
-            Next →
-          </button>
+          {page < totalPages - 1 && (
+            <button
+              onClick={handleNext}
+              disabled={loading}
+            >
+              Next →
+            </button>
+          )}
         </div>
       )}
+
     </div>
   );  
 };
@@ -247,22 +260,31 @@ const TokenMetadataDisplay = ({ tokenURI }: { tokenURI: string }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tokenURI]);
 
+  const getFinalImageSrc = () => {
+    if (jsonData && jsonData.image) {
+      //console.log("Image OK");
+      return resolveIPFS(jsonData.image);
+    }
+    //console.log("Image NOT OK");
+    return "/default-image.svg";
+  }
+
   if (error) return <p style={{ color: "red" }}>{error}</p>;
-  if (!jsonData) return <p>Loading metadata...</p>;
 
   return (
     <div className={styles.groupImageContainer}>
-      {jsonData.image && (
-        <Image
-          className={styles.groupImage}
-          src={jsonData.image.replace("ipfs://", "https://ipfs.io/ipfs/")}
-          alt={jsonData.name || "Token Image"}
-          width={200}
-          height={200}
-        />
-      )}
-      <h3>{jsonData.name || "Unnamed Token"}</h3>
-      {/* <p>{jsonData.description || "No description available."}</p> */}
+      <img
+        className={styles.groupImage}
+        src={getFinalImageSrc()}
+        alt={jsonData?.name || "Token Image"}
+        loading="lazy"
+        width={200}
+        height={200}
+        onError={(e) => {
+          (e.target as HTMLImageElement).src = "/default-image.svg";
+        }}
+      />
+      <h3>{jsonData?.name || (jsonData === null ? "Metadata Not Found" : "Unnamed Token")}</h3>
     </div>
   );
 };
