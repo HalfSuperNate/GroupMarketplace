@@ -470,3 +470,21 @@ export const useFetchNewGroupPrice = () => {
     error_j: result.isError ? "Failed to fetch new group fee" : null,
   };
 };
+
+export const useFetchCreatorFeeMax = () => {
+  const result = useReadContract({
+    abi: contractABI,
+    address: CONTRACT_ADDRESS,
+    functionName: "creatorFeeMax",       // ✅ Ensure you call the correct function
+  });
+
+  const creatorFeeMax = result.data as
+    bigint
+    ;
+
+  return {
+    creatorFeeMax,
+    loading_k: result.isLoading,
+    error_k: result.isError ? "Failed to fetch creator fee max" : null,
+  };
+};

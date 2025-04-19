@@ -1,17 +1,22 @@
 import { useRouter } from 'next/router';
 import { useState, useEffect } from "react";
+import { useAccount } from 'wagmi';
 import { NATIVE_TOKEN } from "../hooks/useContract";
-import { useFetchTokensInGroup, useFetchMetadata, useFetchIsMinted, useFetchTokenUri, useFetchListing, useFetchNextTokenId } from '../hooks/useReadContract';
+import { useFetchTokensInGroup, useFetchMetadata, useFetchIsMinted, useFetchTokenUri, useFetchListing, useFetchNextTokenId, useFetchGroupOwner } from '../hooks/useReadContract';
 import styles from '../styles/Home.module.css';
 import Navbar from "@/components/Navbar";
 import { formatEther } from 'viem';
 import { shuffleArray } from '@/utils/random';
 
 const GroupDisplay = ({ groupName }: { groupName?: string }) => {
+    const { address: connectedAddress } = useAccount();
+    
     const router = useRouter();
 
     const { tokenIds, loading_e, error_e } = useFetchTokensInGroup(groupName || "");
     const { nextTokenId, loading_i, error_i } = useFetchNextTokenId();
+    const { groupOwner, loading_c, error_c } = useFetchGroupOwner(groupName || "");
+    const isGroupOwner = connectedAddress?.toLowerCase() === groupOwner?.toLowerCase();
 
     const [randomTokenIds, setRandomTokenIds] = useState<number[]>([]);
     const [showRandom, setShowRandom] = useState(false);
@@ -36,9 +41,23 @@ const GroupDisplay = ({ groupName }: { groupName?: string }) => {
     return (
         <div className={styles.container}>
             <Navbar />
-            <h1 className={styles.groupHeading}>
-                {showRandom ? "Random Group Marketplace Tokens" : groupName}
-            </h1>
+            <div className={styles.groupHeader}>
+                <h1 className={styles.groupHeading}>
+                    {showRandom ? "Random Group Marketplace Tokens" : groupName}
+                </h1>
+
+                {isGroupOwner && (
+                    <button
+                    className={styles.manageGroupButton}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/groups/manage?groupName=${groupName}`);
+                    }}
+                    >
+                        Manage Group
+                    </button>
+                )}
+            </div>
             <div className={styles.groupGrid}>
                 {(showRandom ? randomTokenIds : tokenIds)?.map((tokenId) => (
                     <TokenCard key={tokenId} tokenId={tokenId} />

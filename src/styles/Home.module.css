@@ -253,13 +253,36 @@
 
 /* Group.module.css */
 
+.groupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
 .groupContainer {
   padding: 2rem;
 }
 
 .groupHeading {
   font-size: 2rem;
-  margin-bottom: 1rem;
+  margin: 0;
+}
+
+.manageGroupButton {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.9rem;
+  background-color: #0070f3;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.manageGroupButton:hover {
+  background-color: #0059c1;
 }
 
 .groupHeadingSmallLink {
@@ -383,3 +406,40 @@
 .marketLinks button:hover {
   transform: scale(1.1);
 }
+
+.groupManageContainer {
+  padding: 2rem;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.groupManageSection {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #4242423d;
+}
+
+.groupManageInput {
+  width: 100%;
+  padding: 0.5rem;
+  margin: 0.5rem 0;
+  font-size: 1rem;
+  border: 1px solid #aaa;
+  border-radius: 4px;
+}
+
+.groupManageButton {
+  padding: 0.5rem 1rem;
+  background-color: #222;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.groupManageButton:hover {
+  background-color: #444;
+}
+
