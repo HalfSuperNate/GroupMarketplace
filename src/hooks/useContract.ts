@@ -214,6 +214,36 @@ export const useContract = () => {
     );
   };
 
+  // Set Group Creator Fee (Royalty)
+  const setCreatorFee = async (groupName: string, fee: bigint) => {
+    await handleTransaction(
+      async () =>
+        await writeContract({
+          abi: contractABI,
+          address: CONTRACT_ADDRESS,
+          functionName: "setCreatorFee",
+          args: [groupName, fee],
+        }),
+      "Creator fee set for group successfully!",
+      "Failed to set creator fee for group"
+    );
+  };
+
+  // Set Group URI
+  const setGroupURI = async (groupName: string, prefixAppendNumSuffix: [string,string,string]) => {
+    await handleTransaction(
+      async () =>
+        await writeContract({
+          abi: contractABI,
+          address: CONTRACT_ADDRESS,
+          functionName: "setGroupURI",
+          args: [groupName, prefixAppendNumSuffix],
+        }),
+      "URI set for group successfully!",
+      "Failed to set URI for group"
+    );
+  };
+
   return {
     loading: loading || isLoading,
     setMetadata,
@@ -222,6 +252,8 @@ export const useContract = () => {
     buyToken,
     cancelListing,
     moveTokenToGroup,
+    setCreatorFee,
+    setGroupURI,
     txHash,
   };
 };

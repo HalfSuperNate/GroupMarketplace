@@ -1,23 +1,32 @@
 import { useRouter } from "next/router";
 import { useAccount } from "wagmi";
 import { useEffect, useState } from "react";
-import { useFetchGroupOwner, useFetchCreatorFeeMax } from "../../hooks/useReadContract";
+import { useContract, NATIVE_TOKEN } from "../../hooks/useContract";
+import { useFetchGroupOwner, useFetchCreatorFeeMax, useFetchCreatorFee, useFetchGroupURI } from "../../hooks/useReadContract";
 import styles from "../../styles/Home.module.css";
 import Navbar from "@/components/Navbar";
 
 const ManageGroup = () => {
     const router = useRouter();
     const { address } = useAccount();
+    const { setCreatorFee, setGroupURI, loading: isLoading } = useContract();
     const { groupName } = router.query as { groupName?: string };
     const { groupOwner, loading_c, error_c } = useFetchGroupOwner(groupName || "");
     const { creatorFeeMax, loading_k, error_k } = useFetchCreatorFeeMax();
+    const { creatorFee, loading_l, error_l } = useFetchCreatorFee(groupName || "");
+    const { groupURI, loading_m, error_m } = useFetchGroupURI(groupName || "");
 
     const [owner, setOwner] = useState<string | null>(null);
     const [isOwner, setIsOwner] = useState(false);
 
     const [creatorFeeInput, setCreatorFeeInput] = useState<string>("");
     const [creatorFeeBasisPoints, setCreatorFeeBasisPoints] = useState<number | null>(null);
-    const maxCreatorFeeBasisPoints = (parseInt(creatorFeeMax.toString()));
+    const maxCreatorFeeBasisPoints = (parseInt(creatorFeeMax?.toString()));
+
+    const [prefix, setPrefix] = useState("");
+    const [appendTokenId, setAppendTokenId] = useState(true);
+    const [suffix, setSuffix] = useState("");
+    const [exampleTokenId, setExampleTokenId] = useState("1");
 
     const handleFeeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
@@ -39,6 +48,22 @@ const ManageGroup = () => {
         setOwner(groupOwner);
         setIsOwner(groupOwner.toLowerCase() === address.toLowerCase());
     }, [groupOwner, address]);
+
+    const handleSetCreatorFee = async () => {
+        if (groupName === undefined || !isOwner || !creatorFeeBasisPoints) return;
+
+        // Set Creator Fee
+        await setCreatorFee(groupName, BigInt(creatorFeeBasisPoints));
+        return;
+    };
+
+    const handleSetURI = async () => {
+        if (groupName === undefined || !isOwner) return;
+
+        // Set Group URI
+        await setGroupURI(groupName, [prefix, appendTokenId ? "Y" : "", suffix]);
+        return;
+    };
 
     if (!groupName) {
         return (
@@ -86,6 +111,7 @@ const ManageGroup = () => {
                     />
                     <p>Basis Points: {creatorFeeBasisPoints ?? "—"}</p>
                     <p>Max: {(maxCreatorFeeBasisPoints / 100)}%</p>
+                    <p>Current Creator Fee: {(parseInt(creatorFee?.toString()) / 100)}%</p>
                     {creatorFeeBasisPoints !== null && creatorFeeBasisPoints > maxCreatorFeeBasisPoints && (
                         <p className={styles.warning}>
                             Fee too high. Max allowed is {(maxCreatorFeeBasisPoints / 100).toFixed(1)}%
@@ -94,6 +120,7 @@ const ManageGroup = () => {
 
                     <button
                     className={styles.groupManageButton}
+                    onClick={handleSetCreatorFee}
                     disabled={
                         creatorFeeBasisPoints === null ||
                         creatorFeeBasisPoints > maxCreatorFeeBasisPoints
@@ -105,8 +132,58 @@ const ManageGroup = () => {
 
                 <div className={styles.groupManageSection}>
                     <h2>Update Group URI</h2>
-                    <input type="text" placeholder="New metadata URI" className={styles.groupManageInput} />
-                    <button className={styles.groupManageButton}>Update URI</button>
+
+                    <label className={styles.groupManageLabel}>Prefix</label>
+                    <input
+                        type="text"
+                        placeholder="https://example.com/metadata/ or ipfs://CID/"
+                        className={styles.groupManageInput}
+                        value={prefix}
+                        onChange={(e) => setPrefix(e.target.value)}
+                    />
+
+                    <label className={styles.groupManageCheckbox}>
+                        <input
+                        type="checkbox"
+                        checked={appendTokenId}
+                        onChange={(e) => setAppendTokenId(e.target.checked)}
+                        />
+                        Append token ID after prefix
+                    </label>
+
+                    {appendTokenId && (
+                        <div>
+                        <label className={styles.groupManageLabel}>Example Token ID</label>
+                        <input
+                            type="text"
+                            placeholder="e.g. 1"
+                            className={styles.groupManageInput}
+                            value={exampleTokenId}
+                            onChange={(e) => setExampleTokenId(e.target.value)}
+                        />
+                        </div>
+                    )}
+
+                    <label className={styles.groupManageLabel}>Suffix</label>
+                    <input
+                        type="text"
+                        placeholder=".json"
+                        className={styles.groupManageInput}
+                        value={suffix}
+                        onChange={(e) => setSuffix(e.target.value)}
+                    />
+
+                    <p className={styles.groupManageNote}>
+                        Example URI: {prefix}{appendTokenId ? exampleTokenId : ""}{suffix}
+                    </p>
+                    <p>{`Current URI: ${groupURI[0]}${groupURI[1] && appendTokenId ? exampleTokenId ? exampleTokenId : 1 : ""}${groupURI[2]}`}</p>
+
+                    <button 
+                        className={styles.groupManageButton}
+                        onClick={handleSetURI}
+                    >
+                        Update URI
+                    </button>
                 </div>
 
                 <div className={styles.groupManageSection}>

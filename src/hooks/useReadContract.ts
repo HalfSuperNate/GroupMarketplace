@@ -488,3 +488,65 @@ export const useFetchCreatorFeeMax = () => {
     error_k: result.isError ? "Failed to fetch creator fee max" : null,
   };
 };
+
+export const useFetchCreatorFee = (groupName: string) => {
+  const result = useReadContract({
+    abi: contractABI,
+    address: CONTRACT_ADDRESS,
+    functionName: "creatorFees",       // ✅ Ensure you call the correct function
+    args: [groupName],
+  });
+
+  const creatorFee = result.data as
+    bigint
+    ;
+
+  return {
+    creatorFee,
+    loading_l: result.isLoading,
+    error_l: result.isError ? "Failed to fetch creator fee" : null,
+  };
+};
+
+export const useFetchGroupURI = (groupName: string) => {
+  const result_A = useReadContract({
+    abi: contractABI,
+    address: CONTRACT_ADDRESS,
+    functionName: "groupURI",       // ✅ Ensure you call the correct function
+    args: [groupName, 0],
+  });
+
+  const result_B = useReadContract({
+    abi: contractABI,
+    address: CONTRACT_ADDRESS,
+    functionName: "groupURI",       // ✅ Ensure you call the correct function
+    args: [groupName, 1],
+  });
+
+  const result_C = useReadContract({
+    abi: contractABI,
+    address: CONTRACT_ADDRESS,
+    functionName: "groupURI",       // ✅ Ensure you call the correct function
+    args: [groupName, 2],
+  });
+
+  const loading_m =
+    result_A.isLoading || result_B.isLoading || result_C.isLoading;
+
+  const error_m =
+    result_A.isError || result_B.isError || result_C.isError
+      ? "Failed to fetch group URI"
+      : null;
+
+  const groupURI = [
+    result_A.data as string,
+    result_B.data as string,
+    result_C.data as string,
+  ];
+
+  return {
+    groupURI,
+    loading_m: loading_m,
+    error_m: error_m,
+  };
+};
