@@ -490,22 +490,24 @@ export const useFetchCreatorFeeMax = () => {
 };
 
 export const useFetchCreatorFee = (groupName: string) => {
-  const result = useReadContract({
+  return useReadContract({
     abi: contractABI,
     address: CONTRACT_ADDRESS,
     functionName: "creatorFees",       // ✅ Ensure you call the correct function
     args: [groupName],
   });
 
-  const creatorFee = result.data as
-    bigint
-    ;
+  // const creatorFee = result.data as
+  //   bigint
+  //   ;
+  //const creatorFee = result;
 
-  return {
-    creatorFee,
-    loading_l: result.isLoading,
-    error_l: result.isError ? "Failed to fetch creator fee" : null,
-  };
+  // return {
+  //   result_l,
+  //   loading_l: result_l.isLoading,
+  //   error_l: result_l.isError ? "Failed to fetch creator fee" : null,
+  //   refetch_l: result_l.refetch,
+  // };
 };
 
 export const useFetchGroupURI = (groupName: string) => {

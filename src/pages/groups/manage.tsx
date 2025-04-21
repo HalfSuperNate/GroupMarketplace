@@ -5,6 +5,7 @@ import { useContract, NATIVE_TOKEN } from "../../hooks/useContract";
 import { useFetchGroupOwner, useFetchCreatorFeeMax, useFetchCreatorFee, useFetchGroupURI } from "../../hooks/useReadContract";
 import styles from "../../styles/Home.module.css";
 import Navbar from "@/components/Navbar";
+import { Spinner } from "@chakra-ui/react";
 
 const ManageGroup = () => {
     const router = useRouter();
@@ -13,7 +14,7 @@ const ManageGroup = () => {
     const { groupName } = router.query as { groupName?: string };
     const { groupOwner, loading_c, error_c } = useFetchGroupOwner(groupName || "");
     const { creatorFeeMax, loading_k, error_k } = useFetchCreatorFeeMax();
-    const { creatorFee, loading_l, error_l } = useFetchCreatorFee(groupName || "");
+    const { data: creatorFee, refetch: refetch_l } = useFetchCreatorFee(groupName || "");
     const { groupURI, loading_m, error_m } = useFetchGroupURI(groupName || "");
 
     const [owner, setOwner] = useState<string | null>(null);
@@ -50,13 +51,14 @@ const ManageGroup = () => {
     }, [groupOwner, address]);
 
     const handleSetCreatorFee = async () => {
-        if (groupName === undefined || !isOwner || !creatorFeeBasisPoints) return;
-
-        // Set Creator Fee
-        await setCreatorFee(groupName, BigInt(creatorFeeBasisPoints));
-        return;
+        if (!groupName || !isOwner || creatorFeeBasisPoints === null) return;
+      
+        await setCreatorFee(groupName, BigInt(creatorFeeBasisPoints), async () => {
+            const updated = await refetch_l();
+            console.log("Refetched result:", updated.data?.toString());
+        });
     };
-
+      
     const handleSetURI = async () => {
         if (groupName === undefined || !isOwner) return;
 
@@ -111,7 +113,11 @@ const ManageGroup = () => {
                     />
                     <p>Basis Points: {creatorFeeBasisPoints ?? "—"}</p>
                     <p>Max: {(maxCreatorFeeBasisPoints / 100)}%</p>
-                    <p>Current Creator Fee: {(parseInt(creatorFee?.toString()) / 100)}%</p>
+                    {isLoading ? (
+                        <p>Updating creator fee...<Spinner size="sm" color="white" /></p>
+                    ) : (
+                        <p>Current Creator Fee: {(parseInt(creatorFee?.toString() || "0") / 100)}%</p>
+                    )}
                     {creatorFeeBasisPoints !== null && creatorFeeBasisPoints > maxCreatorFeeBasisPoints && (
                         <p className={styles.warning}>
                             Fee too high. Max allowed is {(maxCreatorFeeBasisPoints / 100).toFixed(1)}%
@@ -123,10 +129,11 @@ const ManageGroup = () => {
                     onClick={handleSetCreatorFee}
                     disabled={
                         creatorFeeBasisPoints === null ||
-                        creatorFeeBasisPoints > maxCreatorFeeBasisPoints
+                        creatorFeeBasisPoints > maxCreatorFeeBasisPoints ||
+                        isLoading
                     }
                     >
-                    Update Fee
+                        {isLoading ? "Setting fee..." : "Set Creator Fee"}
                     </button>
                 </div>
 

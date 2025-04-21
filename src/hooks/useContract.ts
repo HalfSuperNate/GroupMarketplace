@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { parseEther } from "viem"; 
+import { parseEther, BaseError, ContractFunctionRevertedError } from "viem"; 
+import { config } from '../wagmi';
 import { useWriteContract, useWaitForTransactionReceipt, useAccount } from "wagmi";
+import { writeContract, waitForTransactionReceipt, simulateContract } from '@wagmi/core'
 import { toaster } from "../components/ui/toaster";
 import contractABI from "../contracts/GroupMarketplace.json";
 
@@ -12,7 +14,7 @@ export const useContract = () => {
   const [loading, setLoading] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
 
-  const { writeContract } = useWriteContract();
+ // const { writeContract } = useWriteContract();
   const { isLoading, isSuccess, isError } = useWaitForTransactionReceipt({
     hash: txHash as `0x${string}`,
   });
@@ -34,32 +36,57 @@ export const useContract = () => {
   const handleTransaction = async (
     contractCall: () => Promise<any>,
     successMessage: string,
-    errorMessage: string
+    errorMessage: string,
+    onSuccess?: () => void
   ) => {
     try {
       setLoading(true);
+      const result = await contractCall();
+      console.log("contractCall result:", result);
 
-      const result = await contractCall(); // Execute contract call
-      if (result && result.hash) {
-        setTxHash(result.hash); // Store the transaction hash immediately
-        showToast("Transaction sent. Waiting for confirmation...", "info");
-
-        // Wait for confirmation
-        const receipt = await result.wait();
-        if (receipt?.status === "success") {
-          showToast(successMessage, "success");
-        } else {
-          showToast("Transaction failed.", "error");
-        }
+      // ✅ If result is null, it means transaction was cancelled — just return silently
+      if (!result) {
+        console.log("Transaction cancelled by user.");
+        return;
       }
+
+      if (result.result === undefined) {
+        console.log("Undefined result: Transaction Attempt");
+      }
+  
+      // Handle both string and object returns
+      const txHash = typeof result === "string" ? result : result?.hash;
+  
+      if (!txHash) {
+        throw new Error("Transaction was not created properly.");
+      }
+  
+      setTxHash(txHash);
+  
+      const receipt = await waitForTransactionReceipt(config, {
+        hash: txHash,
+      });
+  
+      if (receipt.status === "success") {
+        showToast(successMessage, "success");
+        if (onSuccess) onSuccess();
+      }
+  
+      console.log("Tx submitted:", txHash);
+      console.log("Waiting for confirmation...");
     } catch (error: any) {
       console.error("Transaction error:", error);
-      showToast(errorMessage || `Error: ${error.message}`, "error");
+  
+      if (error?.code === 4001 || error?.message?.includes("User rejected")) {
+        showToast("Transaction canceled.", "info");
+      } else {
+        showToast(errorMessage || error.message || "Unknown error", "error");
+      }
     } finally {
       setLoading(false);
     }
-  };
-
+  };  
+  
   // ✅ Contract Actions
 
   // Set Metadata
@@ -93,7 +120,7 @@ export const useContract = () => {
   
       await handleTransaction(
         async () =>
-          await writeContract({
+          await writeContract(config, {
             abi: contractABI,
             address: CONTRACT_ADDRESS,
             functionName: "setMetadata",
@@ -138,7 +165,7 @@ export const useContract = () => {
     if (tokenId === null || price === undefined) return;
     await handleTransaction(
       async () =>
-        await writeContract({
+        await writeContract(config,{
           abi: contractABI,
           address: CONTRACT_ADDRESS,
           functionName: "mint",
@@ -155,7 +182,7 @@ export const useContract = () => {
     if (tokenId === null || price === undefined) return;
     await handleTransaction(
       async () =>
-        await writeContract({
+        await writeContract(config,{
           abi: contractABI,
           address: CONTRACT_ADDRESS,
           functionName: "listTokenForSale",
@@ -171,7 +198,7 @@ export const useContract = () => {
     if (tokenId === null || price === undefined) return;
     await handleTransaction(
       async () =>
-        await writeContract({
+        await writeContract(config,{
           abi: contractABI,
           address: CONTRACT_ADDRESS,
           functionName: "buyToken",
@@ -187,7 +214,7 @@ export const useContract = () => {
   const cancelListing = async (tokenId: number) => {
     await handleTransaction(
       async () =>
-        await writeContract({
+        await writeContract(config,{
           abi: contractABI,
           address: CONTRACT_ADDRESS,
           functionName: "cancelTokenListing",
@@ -202,7 +229,7 @@ export const useContract = () => {
   const moveTokenToGroup = async (tokenId: number, newGroup: string, price: bigint) => {
     await handleTransaction(
       async () =>
-        await writeContract({
+        await writeContract(config,{
           abi: contractABI,
           address: CONTRACT_ADDRESS,
           functionName: "moveTokenToGroup",
@@ -214,26 +241,54 @@ export const useContract = () => {
     );
   };
 
-  // Set Group Creator Fee (Royalty)
-  const setCreatorFee = async (groupName: string, fee: bigint) => {
-    await handleTransaction(
-      async () =>
-        await writeContract({
-          abi: contractABI,
-          address: CONTRACT_ADDRESS,
-          functionName: "setCreatorFee",
-          args: [groupName, fee],
-        }),
-      "Creator fee set for group successfully!",
-      "Failed to set creator fee for group"
+  const setCreatorFee = async (groupName: string, fee: bigint, onSuccess?: () => void) => {
+    return await handleTransaction(
+      async () => {
+        try {
+          const tx = await writeContract(config, {
+            abi: contractABI,
+            address: CONTRACT_ADDRESS,
+            functionName: "setCreatorFee",
+            args: [groupName, fee],
+          }).catch((err) => {
+            if (err instanceof BaseError) {
+              const revertError = err.walk(err => err instanceof ContractFunctionRevertedError);
+              if (revertError instanceof ContractFunctionRevertedError) {
+                const errorName = revertError.data?.errorName ?? '';
+                // do something with `errorName`
+                console.log(errorName);
+              }
+            }
+            showToast("Transaction canceled.", "info");
+          });
+          return tx;
+        } catch (err: any) {
+          console.error("writeContract error caught in wrapper:", err);
+  
+          const isUserRejection =
+            err?.code === 4001 || // MetaMask
+            err?.message?.toLowerCase().includes("user denied") ||
+            err?.message?.toLowerCase().includes("user rejected");
+  
+          if (isUserRejection) {
+            showToast("Transaction canceled by user.", "info");
+            return null; // 👈 prevent rethrow and let handleTransaction skip it
+          }
+  
+          throw err; // otherwise, bubble up the actual error
+        }
+      },
+      "Creator fee set!",
+      "Failed to set fee",
+      onSuccess
     );
-  };
+  };     
 
   // Set Group URI
   const setGroupURI = async (groupName: string, prefixAppendNumSuffix: [string,string,string]) => {
     await handleTransaction(
       async () =>
-        await writeContract({
+        await writeContract(config,{
           abi: contractABI,
           address: CONTRACT_ADDRESS,
           functionName: "setGroupURI",
@@ -245,7 +300,7 @@ export const useContract = () => {
   };
 
   return {
-    loading: loading || isLoading,
+    loading,
     setMetadata,
     mintToken,
     listToken,
