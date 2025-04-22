@@ -6,16 +6,17 @@ import { useFetchGroupOwner, useFetchCreatorFeeMax, useFetchCreatorFee, useFetch
 import styles from "../../styles/Home.module.css";
 import Navbar from "@/components/Navbar";
 import { Spinner } from "@chakra-ui/react";
+import { Address, isAddress } from "viem";
 
 const ManageGroup = () => {
     const router = useRouter();
     const { address } = useAccount();
-    const { setCreatorFee, setGroupURI, loading: isLoading } = useContract();
+    const { setCreatorFee, setGroupURI, setNewGroupOwner, setGroupRestrictions, loading: isLoading } = useContract();
     const { groupName } = router.query as { groupName?: string };
-    const { groupOwner, loading_c, error_c } = useFetchGroupOwner(groupName || "");
-    const { creatorFeeMax, loading_k, error_k } = useFetchCreatorFeeMax();
+    const { groupOwner, refetch: refetch_c } = useFetchGroupOwner(groupName || "");
+    const { creatorFeeMax } = useFetchCreatorFeeMax();
     const { data: creatorFee, refetch: refetch_l } = useFetchCreatorFee(groupName || "");
-    const { groupURI, loading_m, error_m } = useFetchGroupURI(groupName || "");
+    const { groupURI, refetch: refetch_m } = useFetchGroupURI(groupName || "");
 
     const [owner, setOwner] = useState<string | null>(null);
     const [isOwner, setIsOwner] = useState(false);
@@ -28,6 +29,18 @@ const ManageGroup = () => {
     const [appendTokenId, setAppendTokenId] = useState(true);
     const [suffix, setSuffix] = useState("");
     const [exampleTokenId, setExampleTokenId] = useState("1");
+
+    const [isSettingFee, setIsSettingFee] = useState(false);
+    const [isSettingURI, setIsSettingURI] = useState(false);
+    const [isSettingNewGroupOwner, setIsSettingNewGroupOwner] = useState(false);
+
+    const [newOwnerInput, setNewOwnerInput] = useState<string>("");
+
+    const [restrictionInput, setRestrictionInput] = useState("");
+    const [restrictedAddresses, setRestrictedAddresses] = useState<Address[]>([]);
+    const [isRestrictionMode, setIsRestrictionMode] = useState(true);
+    const [isLoadingRestrictions, setIsLoadingRestrictions] = useState(false);
+
 
     const handleFeeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
@@ -52,21 +65,96 @@ const ManageGroup = () => {
 
     const handleSetCreatorFee = async () => {
         if (!groupName || !isOwner || creatorFeeBasisPoints === null) return;
-      
-        await setCreatorFee(groupName, BigInt(creatorFeeBasisPoints), async () => {
-            const updated = await refetch_l();
-            console.log("Refetched result:", updated.data?.toString());
-        });
-    };
+    
+        setIsSettingFee(true);
+        try {
+            await setCreatorFee(groupName, BigInt(creatorFeeBasisPoints), async () => {
+                const updated = await refetch_l();
+                console.log("Refetched result:", updated.data?.toString());
+            });
+        } catch (err) {
+            console.error("Failed to set creator fee:", err);
+        } finally {
+            setIsSettingFee(false);
+        }
+    };    
       
     const handleSetURI = async () => {
         if (groupName === undefined || !isOwner) return;
+    
+        setIsSettingURI(true);
+        try {
+            await setGroupURI(groupName, [prefix, appendTokenId ? "Y" : "", suffix], async () => {
+                const updated = await refetch_m();
+                console.log("Refetched URIs:", updated);
+            });
+        } catch (err) {
+            console.error("Failed to update URI:", err);
+        } finally {
+            setIsSettingURI(false);
+        }
+    };    
 
-        // Set Group URI
-        await setGroupURI(groupName, [prefix, appendTokenId ? "Y" : "", suffix]);
-        return;
+    const handleSetNewGroupOwner = async () => {
+        if (groupName === undefined || !isOwner || !newOwnerInput) return;
+        if (!isAddress(newOwnerInput)) {
+            alert("Invalid Ethereum address");
+            return;
+        }
+    
+        const confirmation = window.prompt(
+            `You are about to transfer ownership of group "${groupName}" to:\n\n${newOwnerInput}\n\nIf this is correct, type "accept" to confirm.`
+        );
+    
+        if (confirmation?.toLowerCase() !== "accept") {
+            console.log("Group ownership transfer canceled by user.");
+            return;
+        }
+    
+        setIsSettingNewGroupOwner(true);
+        try {
+            await setNewGroupOwner(groupName, newOwnerInput as Address, async () => {
+                const updated = await refetch_c();
+                console.log("Refetched group owner:", updated);
+            });
+        } catch (err) {
+            console.error("Failed to update new group owner:", err);
+        } finally {
+            setIsSettingNewGroupOwner(false);
+        }
+    }; 
+
+    const handleSetGroupRestrictions = async () => {
+        if (groupName === undefined || !isOwner) return;
+        if (restrictedAddresses.length === 0) return;
+      
+        setIsLoadingRestrictions(true);
+        try {
+          await setGroupRestrictions(groupName, restrictedAddresses, isRestrictionMode);
+          console.log(`Restrictions ${isRestrictionMode ? "enabled" : "disabled"} for:`, restrictedAddresses);
+        } catch (err) {
+          console.error("Failed to set group restrictions", err);
+        } finally {
+          setIsLoadingRestrictions(false);
+        }
     };
 
+    const handleAddAddress = () => {
+        if (!isAddress(restrictionInput)) {
+          alert("Invalid Ethereum address");
+          return;
+        }
+      
+        if (!restrictedAddresses.includes(restrictionInput as Address)) {
+          setRestrictedAddresses(prev => [...prev, restrictionInput as Address]);
+          setRestrictionInput("");
+        }
+    };
+      
+    // 🔳 TO DO: if group owner is on this page give the option to:
+
+    // updateGroupRestrictions
+      
     if (!groupName) {
         return (
             <div className={styles.container}>
@@ -113,7 +201,7 @@ const ManageGroup = () => {
                     />
                     <p>Basis Points: {creatorFeeBasisPoints ?? "—"}</p>
                     <p>Max: {(maxCreatorFeeBasisPoints / 100)}%</p>
-                    {isLoading ? (
+                    {isSettingFee ? (
                         <p>Updating creator fee...<Spinner size="sm" color="white" /></p>
                     ) : (
                         <p>Current Creator Fee: {(parseInt(creatorFee?.toString() || "0") / 100)}%</p>
@@ -133,7 +221,7 @@ const ManageGroup = () => {
                         isLoading
                     }
                     >
-                        {isLoading ? "Setting fee..." : "Set Creator Fee"}
+                        {isSettingFee ? "Setting fee..." : "Set Creator Fee"}
                     </button>
                 </div>
 
@@ -183,20 +271,96 @@ const ManageGroup = () => {
                     <p className={styles.groupManageNote}>
                         Example URI: {prefix}{appendTokenId ? exampleTokenId : ""}{suffix}
                     </p>
-                    <p>{`Current URI: ${groupURI[0]}${groupURI[1] && appendTokenId ? exampleTokenId ? exampleTokenId : 1 : ""}${groupURI[2]}`}</p>
-
+                    {isSettingURI ? (
+                        <p>Updating URI...<Spinner size="sm" color="white" /></p>
+                    ) : (
+                        <p>{`Current URI: ${groupURI[0]}${groupURI[1] != "" ? (exampleTokenId ? exampleTokenId : 1) : ""}${groupURI[2]}`}</p>
+                    )}
                     <button 
                         className={styles.groupManageButton}
                         onClick={handleSetURI}
+                        disabled={isLoading}
                     >
-                        Update URI
+                        {isSettingURI ? "Setting URI..." : "Update URI"}
                     </button>
                 </div>
 
                 <div className={styles.groupManageSection}>
-                    <h2>Transfer Ownership</h2>
-                    <input type="text" placeholder="New owner address" className={styles.groupManageInput} />
-                    <button className={styles.groupManageButton}>Transfer Ownership</button>
+                    <h2>Manage Group Restrictions</h2>
+
+                    {/* Input + Add Button */}
+                    <input
+                        type="text"
+                        placeholder="Enter address"
+                        className={styles.groupManageInput}
+                        value={restrictionInput}
+                        onChange={(e) => setRestrictionInput(e.target.value)}
+                    />
+                    <button
+                        className={styles.groupManageButton}
+                        onClick={handleAddAddress}
+                    >
+                        ⊕ Address
+                    </button>
+
+                    {/* Global restriction mode toggle */}
+                    <label className={styles.restrictionToggle}>
+                        <input
+                        type="checkbox"
+                        checked={isRestrictionMode}
+                        onChange={(e) => setIsRestrictionMode(e.target.checked)}
+                        />
+                        {isRestrictionMode ? ": Set Restrictions" : ": Remove Restrictions"} For These Addresses
+                    </label>
+
+                    {/* Display address list with remove buttons */}
+                    <ul className={styles.restrictionList}>
+                        {restrictedAddresses.map((addr, index) => (
+                        <li key={index} className={styles.restrictionItem}>
+                            <span>{addr}</span>
+                            <button
+                            className={styles.groupManageButton}
+                            onClick={() => {
+                                setRestrictedAddresses(prev => prev.filter((_, i) => i !== index));
+                            }}
+                            >
+                            {`⊖`}
+                            </button>
+                        </li>
+                        ))}
+                    </ul>
+
+                    {/* Submit */}
+                    <button
+                        className={styles.groupManageButton}
+                        onClick={handleSetGroupRestrictions}
+                        disabled={isLoading}
+                    >
+                        {isLoadingRestrictions ? "Setting Restrictions..." : "Set Group Restrictions"}
+                    </button>
+                </div>
+
+                <div className={styles.groupManageSection}>
+                    <h2>Transfer Group Ownership</h2>
+                    <input 
+                        type="text" 
+                        placeholder="New owner address" 
+                        className={styles.groupManageInput} 
+                        value={newOwnerInput}
+                        onChange={(e) => setNewOwnerInput(e.target.value)}
+                    />
+                    {isSettingNewGroupOwner ? (
+                        <p>Updating Group Owner...<Spinner size="sm" color="white" /></p>
+                    ) : (
+                        <p>{`Current Owner: ${groupOwner}`}</p>
+                    )}
+                    <button 
+                        className={styles.groupManageButton}
+                        onClick={handleSetNewGroupOwner}
+                        disabled={isLoading}
+                    >
+                        {isSettingNewGroupOwner ? "Setting New Group Owner..." : "Transfer Ownership"}
+                    </button>
                 </div>
             </div>
         </div>

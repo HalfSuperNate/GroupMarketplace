@@ -313,6 +313,7 @@ export const useFetchGroupOwner = (groupName: string) => {
     groupOwner,
     loading_c: result.isLoading,
     error_c: result.isError ? "Failed to fetch group owner" : null,
+    refetch: result.refetch,
   };
 };
 
@@ -496,39 +497,27 @@ export const useFetchCreatorFee = (groupName: string) => {
     functionName: "creatorFees",       // ✅ Ensure you call the correct function
     args: [groupName],
   });
-
-  // const creatorFee = result.data as
-  //   bigint
-  //   ;
-  //const creatorFee = result;
-
-  // return {
-  //   result_l,
-  //   loading_l: result_l.isLoading,
-  //   error_l: result_l.isError ? "Failed to fetch creator fee" : null,
-  //   refetch_l: result_l.refetch,
-  // };
 };
 
 export const useFetchGroupURI = (groupName: string) => {
   const result_A = useReadContract({
     abi: contractABI,
     address: CONTRACT_ADDRESS,
-    functionName: "groupURI",       // ✅ Ensure you call the correct function
+    functionName: "groupURI",
     args: [groupName, 0],
   });
 
   const result_B = useReadContract({
     abi: contractABI,
     address: CONTRACT_ADDRESS,
-    functionName: "groupURI",       // ✅ Ensure you call the correct function
+    functionName: "groupURI",
     args: [groupName, 1],
   });
 
   const result_C = useReadContract({
     abi: contractABI,
     address: CONTRACT_ADDRESS,
-    functionName: "groupURI",       // ✅ Ensure you call the correct function
+    functionName: "groupURI",
     args: [groupName, 2],
   });
 
@@ -546,9 +535,20 @@ export const useFetchGroupURI = (groupName: string) => {
     result_C.data as string,
   ];
 
+  const refetch = async () => {
+    const [a, b, c] = await Promise.all([
+      result_A.refetch(),
+      result_B.refetch(),
+      result_C.refetch(),
+    ]);
+
+    return [a.data, b.data, c.data];
+  };
+
   return {
     groupURI,
-    loading_m: loading_m,
-    error_m: error_m,
+    loading_m,
+    error_m,
+    refetch,
   };
 };

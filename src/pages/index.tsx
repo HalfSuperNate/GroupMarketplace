@@ -43,6 +43,13 @@ const Home: NextPage = () => {
             </a>
           </Link>
 
+          <Link href="/groups/" legacyBehavior>
+            <a className={styles.card}>
+              <h2>Browse &rarr;</h2>
+              <p>Take a look at what's on Group Market. 👁️〰️👁️</p>
+            </a>
+          </Link>
+
         </div>
       </main>
 

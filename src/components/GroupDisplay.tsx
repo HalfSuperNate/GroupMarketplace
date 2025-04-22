@@ -258,18 +258,6 @@ const TokenCard = ({ tokenId }: { tokenId: number }) => {
         return "/default-image.svg";
     }
 
-    // 🔳 TO DO: if group owner is on this page give the option to:
-
-    // trigger function: setGroupURI(groupName, [p, 0|1, s])
-    // user input: [prefix, appendNum 0=N 1=Y, suffix]
-
-    // trigger function: setCreatorFee(groupName, creatorFee)
-    // user input: number less than creatorFeeMax
-
-    // updateGroupOwner
-
-    // updateGroupRestrictions
-
     return (
         <div className={styles.groupCard} onClick={() => goToToken(tokenId)}>
             <img

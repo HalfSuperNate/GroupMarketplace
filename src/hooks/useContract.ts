@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { parseEther, BaseError, ContractFunctionRevertedError } from "viem"; 
+import { parseEther, BaseError, ContractFunctionRevertedError, Address } from "viem"; 
 import { config } from '../wagmi';
 import { useWriteContract, useWaitForTransactionReceipt, useAccount } from "wagmi";
 import { writeContract, waitForTransactionReceipt, simulateContract } from '@wagmi/core'
@@ -86,6 +86,49 @@ export const useContract = () => {
       setLoading(false);
     }
   };  
+
+  // ✅ Safe Write Contract helper
+  const safeWriteContract = async ({
+    functionName,
+    args,
+  }: {
+    functionName: string;
+    args: any[];
+  }) => {
+    try {
+      const tx = await writeContract(config, {
+        abi: contractABI,
+        address: CONTRACT_ADDRESS,
+        functionName,
+        args,
+      }).catch((err) => {
+        if (err instanceof BaseError) {
+          const revertError = err.walk(err => err instanceof ContractFunctionRevertedError);
+          if (revertError instanceof ContractFunctionRevertedError) {
+            const errorName = revertError.data?.errorName ?? "";
+            console.log("Revert error name:", errorName);
+          }
+        }
+        showToast("Transaction canceled.", "info");
+      });
+  
+      return tx;
+    } catch (err: any) {
+      console.error(`writeContract error in ${functionName}:`, err);
+  
+      const isUserRejection =
+        err?.code === 4001 ||
+        err?.message?.toLowerCase().includes("user denied") ||
+        err?.message?.toLowerCase().includes("user rejected");
+  
+      if (isUserRejection) {
+        showToast("Transaction canceled by user.", "info");
+        return null;
+      }
+  
+      throw err;
+    }
+  };
   
   // ✅ Contract Actions
 
@@ -241,43 +284,13 @@ export const useContract = () => {
     );
   };
 
+  // Set Creator Fee (Royalty)
   const setCreatorFee = async (groupName: string, fee: bigint, onSuccess?: () => void) => {
     return await handleTransaction(
-      async () => {
-        try {
-          const tx = await writeContract(config, {
-            abi: contractABI,
-            address: CONTRACT_ADDRESS,
-            functionName: "setCreatorFee",
-            args: [groupName, fee],
-          }).catch((err) => {
-            if (err instanceof BaseError) {
-              const revertError = err.walk(err => err instanceof ContractFunctionRevertedError);
-              if (revertError instanceof ContractFunctionRevertedError) {
-                const errorName = revertError.data?.errorName ?? '';
-                // do something with `errorName`
-                console.log(errorName);
-              }
-            }
-            showToast("Transaction canceled.", "info");
-          });
-          return tx;
-        } catch (err: any) {
-          console.error("writeContract error caught in wrapper:", err);
-  
-          const isUserRejection =
-            err?.code === 4001 || // MetaMask
-            err?.message?.toLowerCase().includes("user denied") ||
-            err?.message?.toLowerCase().includes("user rejected");
-  
-          if (isUserRejection) {
-            showToast("Transaction canceled by user.", "info");
-            return null; // 👈 prevent rethrow and let handleTransaction skip it
-          }
-  
-          throw err; // otherwise, bubble up the actual error
-        }
-      },
+      () => safeWriteContract({
+        functionName: "setCreatorFee",
+        args: [groupName, fee]
+      }),
       "Creator fee set!",
       "Failed to set fee",
       onSuccess
@@ -285,17 +298,54 @@ export const useContract = () => {
   };     
 
   // Set Group URI
-  const setGroupURI = async (groupName: string, prefixAppendNumSuffix: [string,string,string]) => {
-    await handleTransaction(
-      async () =>
-        await writeContract(config,{
-          abi: contractABI,
-          address: CONTRACT_ADDRESS,
-          functionName: "setGroupURI",
-          args: [groupName, prefixAppendNumSuffix],
-        }),
+  const setGroupURI = async (
+    groupName: string,
+    prefixAppendNumSuffix: [string, string, string],
+    onSuccess?: () => void
+  ) => {
+    return await handleTransaction(
+      () => safeWriteContract({
+        functionName: "setGroupURI",
+        args: [groupName, prefixAppendNumSuffix]
+      }),
       "URI set for group successfully!",
-      "Failed to set URI for group"
+      "Failed to set URI for group",
+      onSuccess
+    );
+  };
+
+  // Set New Group Owner
+  const setNewGroupOwner = async (
+    groupName: string,
+    newAddress: Address,
+    onSuccess?: () => void
+  ) => {
+    return await handleTransaction(
+      () => safeWriteContract({
+        functionName: "updateGroupOwner",
+        args: [groupName, newAddress]
+      }),
+      "New group owner set successfully!",
+      "Failed to set new owner for group",
+      onSuccess
+    );
+  };
+
+  // Set Group Restrictions
+  const setGroupRestrictions = async (
+    groupName: string,
+    addresses: Address[],
+    restricted: boolean,
+    onSuccess?: () => void
+  ) => {
+    return await handleTransaction(
+      () => safeWriteContract({
+        functionName: "updateGroupRestrictions",
+        args: [groupName, addresses, restricted]
+      }),
+      "New group restrictions set successfully!",
+      "Failed to set restrictions for group",
+      onSuccess
     );
   };
 
@@ -309,6 +359,8 @@ export const useContract = () => {
     moveTokenToGroup,
     setCreatorFee,
     setGroupURI,
+    setNewGroupOwner,
+    setGroupRestrictions,
     txHash,
   };
 };
