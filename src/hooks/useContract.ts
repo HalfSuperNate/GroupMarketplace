@@ -91,9 +91,11 @@ export const useContract = () => {
   const safeWriteContract = async ({
     functionName,
     args,
+    value,
   }: {
     functionName: string;
     args: any[];
+    value?: bigint;
   }) => {
     try {
       const tx = await writeContract(config, {
@@ -101,9 +103,10 @@ export const useContract = () => {
         address: CONTRACT_ADDRESS,
         functionName,
         args,
+        ...(value !== undefined ? { value } : {}),
       }).catch((err) => {
         if (err instanceof BaseError) {
-          const revertError = err.walk(err => err instanceof ContractFunctionRevertedError);
+          const revertError = err.walk((err) => err instanceof ContractFunctionRevertedError);
           if (revertError instanceof ContractFunctionRevertedError) {
             const errorName = revertError.data?.errorName ?? "";
             console.log("Revert error name:", errorName);
@@ -128,7 +131,7 @@ export const useContract = () => {
   
       throw err;
     }
-  };
+  };  
   
   // ✅ Contract Actions
 
@@ -157,15 +160,12 @@ export const useContract = () => {
     appendNumberToImage: boolean,
     imageExtension: string,
     appendNumberToAnim: boolean,
-    animExtension: string
+    animExtension: string,
+    onSuccess?: () => void
   ) => {
     try {
-  
-      await handleTransaction(
-        async () =>
-          await writeContract(config, {
-            abi: contractABI,
-            address: CONTRACT_ADDRESS,
+      return await handleTransaction(
+        () => safeWriteContract({
             functionName: "setMetadata",
             args: [[
               group,                         // string group
@@ -196,7 +196,8 @@ export const useContract = () => {
             value: parseEther(((0.00005 * batchSize) + 0.0005).toString()),
           }),
         "Metadata set successfully!",
-        "Failed to set metadata"
+        "Failed to set metadata",
+        onSuccess
       );
     } catch (error) {
       console.error("Error setting metadata:", error);
@@ -204,83 +205,73 @@ export const useContract = () => {
   };
 
   // Mint Token
-  const mintToken = async (tokenId: number, price: bigint) => {
+  const mintToken = async (tokenId: number, price: bigint, onSuccess?: () => void) => {
     if (tokenId === null || price === undefined) return;
-    await handleTransaction(
-      async () =>
-        await writeContract(config,{
-          abi: contractABI,
-          address: CONTRACT_ADDRESS,
-          functionName: "mint",
-          args: [tokenId],
-          value: price,
-        }),
+    return await handleTransaction(
+      () => safeWriteContract({
+        functionName: "mint",
+        args: [tokenId],
+        value: price,
+      }),
       "Token minted successfully!",
-      "Failed to mint token"
+      "Failed to mint token",
+      onSuccess
     );
   };
 
   // List Token
-  const listToken = async (tokenId: number, price: bigint, duration: bigint) => {
+  const listToken = async (tokenId: number, price: bigint, duration: bigint, onSuccess?: () => void) => {
     if (tokenId === null || price === undefined) return;
-    await handleTransaction(
-      async () =>
-        await writeContract(config,{
-          abi: contractABI,
-          address: CONTRACT_ADDRESS,
+    return await handleTransaction(
+      () => safeWriteContract({
           functionName: "listTokenForSale",
           args: [tokenId, price, duration],
-        }),
+      }),
       "Token listed successfully!",
-      "Failed to list token"
+      "Failed to list token",
+      onSuccess
     );
   };
 
   // Buy Token
-  const buyToken = async (tokenId: number, price: bigint) => {
+  const buyToken = async (tokenId: number, price: bigint, onSuccess?: () => void) => {
     if (tokenId === null || price === undefined) return;
-    await handleTransaction(
-      async () =>
-        await writeContract(config,{
-          abi: contractABI,
-          address: CONTRACT_ADDRESS,
-          functionName: "buyToken",
-          args: [tokenId],
-          value: price,
-        }),
+    return await handleTransaction(
+      () => safeWriteContract({
+        functionName: "buyToken",
+        args: [tokenId],
+        value: price, // will be passed if defined
+      }),
       "Token purchased successfully!",
-      "Failed to buy token"
+      "Failed to buy token",
+      onSuccess
     );
   };
 
   // Cancel Listing
-  const cancelListing = async (tokenId: number) => {
-    await handleTransaction(
-      async () =>
-        await writeContract(config,{
-          abi: contractABI,
-          address: CONTRACT_ADDRESS,
-          functionName: "cancelTokenListing",
-          args: [tokenId],
-        }),
+  const cancelListing = async (tokenId: number, onSuccess?: () => void) => {
+    return await handleTransaction(
+      () => safeWriteContract({
+        functionName: "cancelTokenListing",
+        args: [tokenId],
+      }),
       "Listing canceled successfully!",
-      "Failed to cancel listing"
+      "Failed to cancel listing",
+      onSuccess
     );
   };
 
   // Move Token to Group
-  const moveTokenToGroup = async (tokenId: number, newGroup: string, price: bigint) => {
-    await handleTransaction(
-      async () =>
-        await writeContract(config,{
-          abi: contractABI,
-          address: CONTRACT_ADDRESS,
-          functionName: "moveTokenToGroup",
-          args: [tokenId, newGroup],
-          value: price,
-        }),
+  const moveTokenToGroup = async (tokenId: number, newGroup: string, price: bigint, onSuccess?: () => void) => {
+    return await handleTransaction(
+      () => safeWriteContract({
+        functionName: "moveTokenToGroup",
+        args: [tokenId, newGroup],
+        value: price,
+      }),
       "Token moved to new group successfully!",
-      "Failed to move token to group"
+      "Failed to move token to group",
+      onSuccess
     );
   };
 

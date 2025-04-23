@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from 'next/router';
 import { useState, useEffect, useCallback } from "react";
 import { useContract, NATIVE_TOKEN } from "../../hooks/useContract";
 import { useFetchGroupOwner } from "../../hooks/useReadContract";
@@ -19,6 +20,23 @@ interface Attribute {
 const SetMetadata = () => {
   const { address } = useAccount();
   const { setMetadata, loading } = useContract();
+
+  const router = useRouter();
+  const [tokenId, setTokenId] = useState<number | null>(null);
+
+  // Read tokenId from query on mount
+  useEffect(() => {
+    if (router.isReady && router.query.tokenId) {
+      const queryTokenId = parseInt(router.query.tokenId as string);
+      if (!isNaN(queryTokenId)) {
+        setTokenId(queryTokenId);
+      }
+    }
+  }, [router.isReady, router.query.tokenId]);
+
+  console.log("Token ID has been set: ", tokenId);
+
+  // 🔳 TO DO: if tokenId is not null set this up to updateMetadata on that specific token
 
   // ✅ State for form inputs
   const [metadataInput, setMetadataInput] = useState({

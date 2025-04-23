@@ -359,36 +359,32 @@ export const useFetchTokensInGroup = (groupName: string) => {
 
 export const useFetchListing = (tokenId: number | undefined) => {
   if (tokenId === undefined) {
-    return { listing: null, loading_f: false, error_f: null };
+    return { listing: null, loading_f: false, error_f: null, refetch_f: async () => null };
   }
+
   const result = useReadContract({
     abi: contractABI,
     address: CONTRACT_ADDRESS,
-    functionName: "listings",       // ✅ Ensure you call the correct function
+    functionName: "listings",
     args: [tokenId],
   });
 
-  // Explicitly type result.data as a tuple
-  const fullData = result.data as [
-    bigint,
-    bigint,
-    boolean,
-    string
-  ];
+  const fullData = result.data as [bigint, bigint, boolean, string] | undefined;
 
   const listing: Listing | null = fullData
     ? {
-      price: BigInt(fullData[0].toString()),
-      expiration: BigInt(fullData[1].toString()),
-      active: fullData[2],
-      seller: fullData[3] as `0x${string}`,
-    }
+        price: BigInt(fullData[0].toString()),
+        expiration: BigInt(fullData[1].toString()),
+        active: fullData[2],
+        seller: fullData[3] as `0x${string}`,
+      }
     : null;
 
   return {
     listing,
     loading_f: result.isLoading,
     error_f: result.isError ? "Failed to fetch listing" : null,
+    refetch_f: result.refetch,
   };
 };
 
@@ -415,24 +411,23 @@ export const useFetchTokenOwner = (tokenId: number | undefined) => {
 };
 
 export const useFetchTokenGroup = (tokenId: number | undefined) => {
-  if (tokenId === undefined) {
-    return { tokenGroup: "", loading_h: false, error_h: null };
-  }
   const result = useReadContract({
     abi: contractABI,
     address: CONTRACT_ADDRESS,
-    functionName: "tokenGroup",       // ✅ Ensure you call the correct function
-    args: [tokenId],
+    functionName: "tokenGroup",
+    args: tokenId !== undefined ? [tokenId] : undefined,
+    query: {
+      enabled: tokenId !== undefined, // disables call if undefined
+    },
   });
 
-  const tokenGroup = result.data as
-    string
-    ;
+  const tokenGroup = result.data as string;
 
   return {
     tokenGroup,
     loading_h: result.isLoading,
     error_h: result.isError ? "Failed to fetch token group" : null,
+    refetch_h: result.refetch,
   };
 };
 

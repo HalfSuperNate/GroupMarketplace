@@ -31,12 +31,12 @@ const TokenAction = () => {
   const { onChain, loading_a, error_a } = useFetchMetadataSet(tokenId ?? 0);
   const { tokenURI, loading_b, error_b } = useFetchTokenUri(tokenId ?? 0);
   const { isMinted, loading_d, error_d } = useFetchIsMinted(tokenId ?? 0);
-  const { listing, loading_f, error_f } = useFetchListing(tokenId ?? 0);
+  const { listing, loading_f, error_f, refetch_f } = useFetchListing(tokenId ?? 0);
   const { tokenOwner, loading_g, error_g } = useFetchTokenOwner(tokenId ?? 0);
   const isTokenOwner = address === tokenOwner || false;
   const isTokenCreator = address === metadata?.creator || false;
   const isLocked = metadata?.locked || false;
-  const { tokenGroup, loading_h, error_h } = useFetchTokenGroup(tokenId ?? 0);
+  const { tokenGroup, loading_h, error_h, refetch_h } = useFetchTokenGroup(tokenId ?? 0);
 
   const now = Math.floor(Date.now() / 1000); // current Unix timestamp
   const isListedAndActive = !!(listing?.active && listing.expiration > now);
@@ -102,11 +102,18 @@ const TokenAction = () => {
       price = newGroupFee;
     }
   
-    await moveTokenToGroup(
-      tokenId, 
-      groupName, 
-      price,                                         
-    );
+    try {
+      await moveTokenToGroup(
+        tokenId, 
+        groupName, 
+        price,
+      async () => {
+        const updated = await refetch_h();
+        console.log("Refetched token group:", updated);
+      });
+    } catch (error) {
+      console.error("Failed to fetch token group:", error);
+    }
   };
 
   // ✅ Improved Base64 decoding with padding and error handling
@@ -240,7 +247,14 @@ const TokenAction = () => {
     if (tokenId === null || tokenId < 0 || !isListedAndActive) return;
 
     // Cancel Sale
-    await cancelListing(tokenId);
+    try {
+      await cancelListing(tokenId, async () => {
+        const updated = await refetch_f();
+        console.log("Refetched listing:", updated);
+      });
+    } catch (error) {
+      console.error("Failed to cancel listing:", error);
+    }
     return;
   };
 
@@ -248,12 +262,26 @@ const TokenAction = () => {
     if (tokenId === null || tokenId < 0 || !displayPrice) return;
     if (!isMinted) {
       // Mint Token
-      await mintToken(tokenId, displayPrice);
+      try {
+        await mintToken(tokenId, displayPrice, async () => {
+          const updated = await refetch_f();
+          console.log("Refetched listing:", updated);
+        });
+      } catch (error) {
+        console.error("Failed to mint token:", error);
+      }
       return;
     }
     if (isListedAndActive) {
       // Buy Token
-      await buyToken(tokenId, displayPrice);
+      try {
+        await buyToken(tokenId, displayPrice, async () => {
+          const updated = await refetch_f();
+          console.log("Refetched listing:", updated);
+        });
+      } catch (error) {
+        console.error("Failed to buy token:", error);
+      }
       return;
     }
   };
@@ -296,7 +324,14 @@ const TokenAction = () => {
     const duration = BigInt(expiration - currentUnix);
     if (tokenId === null || tokenId < 0 || !sellPrice || isListedAndActive || duration <= 0n) return;
     const setPrice = parseEther(sellPrice.toString());
-    await listToken(tokenId, setPrice, duration);
+    try {
+      await listToken(tokenId, setPrice, duration, async () => {
+        const updated = await refetch_f();
+        console.log("Refetched listing:", updated);
+      });
+    } catch (error) {
+      console.error("Failed to list token:", error);
+    }
   };
 
   if (tokenId === null) {
@@ -338,7 +373,7 @@ const TokenAction = () => {
             </div>
           ) : error ? (
             <p className={styles.warning}>Error: {error}</p>
-          ) : metadata  && tokenURI ? (
+          ) : metadata && tokenURI ? (
             <div className={styles.metadata}>
               {onChain ? (
                 <div className={styles.metadata}>
@@ -494,7 +529,7 @@ const TokenAction = () => {
             className={styles.button}
             onClick={handlePurchase}
             disabled={
-              isLoading || !metadata || metadata.price === undefined ||
+              isLoading || !metadata || !tokenURI || metadata?.price === undefined ||
               (isMinted && (!isListedAndActive || displayPrice === undefined))
             }
           >
@@ -662,7 +697,7 @@ const TokenAction = () => {
                   <p>✅ The group name is available!</p>
                 )
               ) : (
-                <p>❌ The group name is taken or invalid.</p>
+                  <p>❌ The group name is taken or invalid.</p>
               )}
 
               <button 
