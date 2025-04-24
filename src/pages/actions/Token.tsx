@@ -4,12 +4,12 @@ import { useRouter } from 'next/router';
 import { useState, useEffect } from "react";
 import { useContract, NATIVE_TOKEN } from "../../hooks/useContract";
 import { useFetchMetadata, useFetchMetadataSet, useFetchTokenUri, useFetchIsMinted, useFetchListing, useFetchTokenOwner, useFetchTokenGroup, useFetchGroupOwner, useFetchNewGroupPrice } from "../../hooks/useReadContract";
-// import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Spinner } from "@chakra-ui/react";
 import styles from "../../styles/Home.module.css";
 import { formatEther, parseEther } from "viem";
 import Navbar from "@/components/Navbar";
 import { useAccount } from "wagmi";
+import Link from "next/link";
 
 const TokenAction = () => {
   const { address } = useAccount();
@@ -521,7 +521,41 @@ const TokenAction = () => {
               )}
             </div>
           ) : (
-            <p>No metadata found for ID: {tokenId}</p>
+            metadata?.creator != "0x0000000000000000000000000000000000000000" ? 
+              <div>
+                <p>
+                  <strong>Group:</strong>{' '}
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      router.push(`/groups/${tokenGroup.trim()}`);
+                    }}
+                  >
+                    {tokenGroup}
+                  </a>
+                </p>
+                {isTokenCreator ? (
+                  <Link href={`/actions/SetMetadata?tokenId=${tokenId}`} passHref>
+                    <p style={{ cursor: "pointer" }}>
+                      No metadata found for ID: {tokenId}
+                    </p>
+                    <p style={{ cursor: "pointer" }}>
+                      <span style={{ cursor: "pointer", color: 'lightblue', textDecoration: "underline" }}>Click here</span>{` `}to set metadata for this token
+                    </p>
+                  </Link>
+                ) : (
+                  <p>
+                    No metadata found for ID: {tokenId}
+                  </p>
+                )}
+              </div>
+            :
+              <p>
+                ERROR:<br></br>
+                Token ID: {tokenId}<br></br>
+                NOT FOUND
+              </p>
           )}
 
           {/* ✅ Display Minting or Buying button */}
@@ -543,7 +577,15 @@ const TokenAction = () => {
               "No Active Sale"
             )}
           </button>
-
+          
+          {isTokenCreator ? (
+            <Link href={`/actions/SetMetadata?tokenId=${tokenId}`} passHref>
+              <p style={{ cursor: "pointer", color: 'lightblue', textDecoration: "underline" }}>
+                Edit Metadata for ID: {tokenId}
+              </p>
+            </Link> 
+          ):(<></>)}
+          
           {/* ✅ Display Cancel Listing Options if token owner */}
           {isTokenOwner && isListedAndActive ? (
             <div className={styles.form}>

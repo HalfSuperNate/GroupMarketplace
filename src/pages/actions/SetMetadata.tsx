@@ -3,8 +3,7 @@
 import { useRouter } from 'next/router';
 import { useState, useEffect, useCallback } from "react";
 import { useContract, NATIVE_TOKEN } from "../../hooks/useContract";
-import { useFetchGroupOwner } from "../../hooks/useReadContract";
-// import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useFetchGroupOwner, useFetchTokenGroup } from "../../hooks/useReadContract";
 import { Spinner } from "@chakra-ui/react";
 import styles from "../../styles/Home.module.css";
 import { parseEther } from 'viem'
@@ -19,7 +18,7 @@ interface Attribute {
 
 const SetMetadata = () => {
   const { address } = useAccount();
-  const { setMetadata, loading } = useContract();
+  const { setMetadata, updateMetadata, loading } = useContract();
 
   const router = useRouter();
   const [tokenId, setTokenId] = useState<number | null>(null);
@@ -92,9 +91,9 @@ const SetMetadata = () => {
   // ✅ Handle changes for the Metadata struct
   const handleMetadataChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-  
+
     let newValue: string | boolean = value; // Define as string or boolean
-  
+
     if (name === "price") {
       newValue = value; // No change for price
     } else if (type === "checkbox") {
@@ -104,7 +103,7 @@ const SetMetadata = () => {
       // Remove the '#' from the color value
       newValue = value.slice(1);
     }
-  
+
     setMetadataStruct((prev) => ({ ...prev, [name]: newValue }));
   }
 
@@ -113,6 +112,7 @@ const SetMetadata = () => {
   const [ownedGroup, setIsOwned] = useState<boolean | null>(null);
   // Destructure the result from the useFetchGroupOwner hook
   const { groupOwner, loading_c, error_c } = useFetchGroupOwner(groupName);
+  const { tokenGroup, refetch_h } = useFetchTokenGroup(tokenId ?? 0);
 
   const handleGroupChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setGroupName(e.target.value);
@@ -157,10 +157,16 @@ const SetMetadata = () => {
     }
   };
 
-  const [isOnChain, setIsOnChain] = useState<boolean>(false);
+  const [isOnChain, setIsOnChain] = useState<boolean>(true);
 
   const handleToggleOnChain = () => {
     setIsOnChain((prevState) => !prevState);
+  };
+
+  const [removeMetadata, setRemoveMetadata] = useState<boolean>(false);
+
+  const handleToggleRemoveMetadata = () => {
+    setRemoveMetadata((prevState) => !prevState);
   };
 
   // Handles file selection and conversion to base64
@@ -188,30 +194,30 @@ const SetMetadata = () => {
     }
   };
 
-  {/* Determine Final Image Source */}
+  {/* Determine Final Image Source */ }
   const getFinalImageSrc = () => {
     let finalImage = metadata.image;
-  
+
     if (imageMode === "manual") {
       if (!finalImage) {
         return "/path-to-placeholder-image.png"; // Provide a valid placeholder image path
       }
-  
+
       if (finalImage.startsWith("ipfs://")) {
         finalImage = finalImage.replace("ipfs://", "https://ipfs.io/ipfs/");
       }
-  
+
       // Append number if the option is enabled
       if (metadataInput.appendNumberToImage) {
         finalImage += metadataInput.startingNumber || "";
       }
-  
+
       // Append image extension if provided
       if (metadataInput.imageExtension) {
         finalImage += metadataInput.imageExtension;
       }
     }
-  
+
     return finalImage || "https://dummyimage.com/300x300/ccc/000.png&text=No+Image"; // Default if the image is empty
   };
 
@@ -226,7 +232,7 @@ const SetMetadata = () => {
   ) => {
     const { name, value } = e.target;
     const updatedAttributes = [...attributes];
-  
+
     if (name === "value" && updatedAttributes[index].display_type === "date") {
       // Convert date to Unix timestamp immediately
       const date = new Date(value);
@@ -245,7 +251,7 @@ const SetMetadata = () => {
         [name]: value,
       };
     }
-  
+
     setAttributes(updatedAttributes);
   };
 
@@ -256,8 +262,8 @@ const SetMetadata = () => {
   const removeAttribute = (index: number) => {
     const updatedAttributes = attributes.filter((_, i) => i !== index);
     setAttributes(updatedAttributes);
-  };   
-  
+  };
+
   // ✅ Use `useEffect` to update state when attributes change
   useEffect(() => {
     setMetadataStruct((prev) => ({
@@ -266,9 +272,9 @@ const SetMetadata = () => {
         if (attribute.display_type === "value_only") {
           return { value: attribute.value };
         }
-  
+
         const isNumericType = ["number", "boost_number", "boost_percentage", "date"].includes(attribute.display_type || "");
-  
+
         return {
           trait_type: attribute.trait_type,
           value: isNumericType ? Number(attribute.value) : attribute.value,
@@ -283,213 +289,255 @@ const SetMetadata = () => {
       if (attribute.display_type === "value_only") {
         return { value: attribute.value }; // ✅ Omit trait_type and display_type for "value_only"
       }
-  
+
       const isNumericType = ["number", "boost_number", "boost_percentage", "date"].includes(attribute.display_type || "");
-  
+
       return {
         trait_type: attribute.trait_type,
         value: isNumericType ? Number(attribute.value) : attribute.value,  // ✅ Convert numbers properly
         ...(attribute.display_type ? { display_type: attribute.display_type } : {})
       };
     });
-  
+
     //console.log("Updated Attributes:", JSON.stringify(updatedAttributes)); // ✅ Logs correct attributes
-  
+
     // Explicitly type jsonArray
     const jsonArray: [
-      string, 
-      number, 
-      number, 
-      string, 
-      number, 
-      string, 
-      (string | number | boolean)[], 
-      boolean, 
-      boolean, 
-      string, 
-      boolean, 
+      string,
+      number,
+      number,
+      string,
+      number,
+      string,
+      (string | number | boolean)[],
+      boolean,
+      boolean,
+      string,
+      boolean,
       string
     ] = [
-      metadataInput.group,
-      metadataInput.batchSize,
-      metadataInput.startingNumber,
-      metadataInput.groupURI,
-      metadataInput.appendNumberToGroupURI,
-      metadataInput.groupURIext,
-      [
-        metadata.name,
-        metadata.description,
-        metadata.externalUrl,
-        metadata.image,
-        metadata.animationUrl,
-        metadata.youtubeUrl,
-        metadata.backgroundColor,
-        JSON.stringify(updatedAttributes), // ✅ Stringified attributes stored correctly
-        metadata.creator,
-        String(metadata.locked), // Convert boolean locked to string
-        parseEther(metadata.price).toString()
-      ],
-      metadataInput.appendNumber,
-      metadataInput.appendNumberToImage,
-      metadataInput.imageExtension,
-      metadataInput.appendNumberToAnim,
-      metadataInput.animExtension
-    ];
-  
-    return jsonArray;
-  }, [attributes, metadata, metadataInput]); 
-  
+        metadataInput.group,
+        metadataInput.batchSize,
+        metadataInput.startingNumber,
+        metadataInput.groupURI,
+        metadataInput.appendNumberToGroupURI,
+        metadataInput.groupURIext,
+        [
+          metadata.name,
+          metadata.description,
+          metadata.externalUrl,
+          metadata.image,
+          metadata.animationUrl,
+          metadata.youtubeUrl,
+          metadata.backgroundColor,
+          JSON.stringify(updatedAttributes), // ✅ Stringified attributes stored correctly
+          metadata.creator,
+          String(metadata.locked), // Convert boolean locked to string
+          parseEther(metadata.price).toString()
+        ],
+        metadataInput.appendNumber,
+        metadataInput.appendNumberToImage,
+        metadataInput.imageExtension,
+        metadataInput.appendNumberToAnim,
+        metadataInput.animExtension
+      ];
+
+    return tokenId === null ? jsonArray : jsonArray[6];
+  }, [attributes, metadata, metadataInput]);
+
   // ✅ Handle submit
   const handleSubmit = async () => {
-    const jsonArray = buildMetadataArray();
-  
+    const jsonArray = buildMetadataArray() as any;
+
     // Explicitly extract attributes as string
-    const attributesString = jsonArray[6][7] as string;
-  
-    console.log("Metadata Attributes (Before Sending):", attributesString);
-  
-    await setMetadata(
-      jsonArray[0] as string,                    
-      jsonArray[1] as number,                    
-      jsonArray[2] as number,                    
-      jsonArray[3] as string,                    
-      jsonArray[4] as number,                    
-      jsonArray[5] as string,                    
-      { ...metadata, attributes: attributesString }, // Correctly formatted attributes
-      jsonArray[7] as boolean,                    
-      jsonArray[8] as boolean,                    
-      jsonArray[9] as string,                    
-      jsonArray[10] as boolean,                   
-      jsonArray[11] as string,                    
-    );
+    const attributesString = (tokenId === null ? jsonArray[6][7] as string : jsonArray[7] as string);
+
+    // console.log("Metadata Attributes (Before Sending):", attributesString);
+    // console.log(jsonArray);
+
+    try {
+      if(tokenId === null) {
+        await setMetadata(
+          jsonArray[0] as string,
+          jsonArray[1] as number,
+          jsonArray[2] as number,
+          jsonArray[3] as string,
+          jsonArray[4] as number,
+          jsonArray[5] as string,
+          { ...metadata, attributes: attributesString }, // Correctly formatted attributes
+          jsonArray[7] as boolean,
+          jsonArray[8] as boolean,
+          jsonArray[9] as string,
+          jsonArray[10] as boolean,
+          jsonArray[11] as string,
+        );
+      } else {
+        //setMetadataStruct((prev) => ({ ...prev, creator: address as string, locked: false}));
+        //console.log(metadata);
+        await updateMetadata(
+          tokenId,
+          removeMetadata,
+          { ...metadata, attributes: attributesString, creator: address as string, locked: false }, // Correctly formatted attributes
+          async () => {
+            console.log("Updated Token Metadata");
+          }
+        );
+      }
+    } catch (error) {
+      console.error("Failed to fetch token group:", error);
+    }
+    
   };
-  
+
   return (
     <div className={styles.container}>
       <Navbar />
       <main className={styles.main}>
         <h1 className={styles.title}>Set Metadata</h1>
 
-        {/* ✅ Connect Button */}
-        {/* <div className={styles.connectButton}>
-          <ConnectButton label="Connect Wallet" accountStatus="address" chainStatus="none" />
-        </div> */}
-
         {/* ✅ MetadataInput Fields */}
-        <div className={styles.form}>
-          <h2><strong>Group Details</strong></h2>
+        {tokenId === null ? (
+          <div className={styles.form}>
+            <h2><strong>Group Details</strong></h2>
 
-          <div>
+            <div>
+              <label className={styles.label}>
+                Group:
+                <input
+                  className={styles.input}
+                  name="group"
+                  value={groupName}
+                  onChange={handleGroupChange}
+                />
+              </label>
+
+              {/* Conditional rendering based on the group availability status */}
+              {loading_c && <p>Loading...</p>}
+              {error_c && <p style={{ color: 'red' }}>{error_c}</p>}
+              {isGroupAvailable === null ? (
+                <p>Please check if the group is available.</p>
+              ) : isGroupAvailable ? (
+                ownedGroup ? (
+                  <p>✅ You Own This Group!</p>
+                ) : (
+                  <p>✅ The group name is available!</p>
+                )
+              ) : (
+                <p>❌ The group name is taken or invalid.</p>
+              )}
+
+              <button
+                className={styles.attributesButton}
+                type="button"
+                onClick={handleCheckGroup}
+                disabled={!groupName} // Disable if group name is empty
+              >
+                Check Group
+              </button>
+            </div>
+
             <label className={styles.label}>
-              Group:
-              <input
-                className={styles.input}
-                name="group"
-                value={groupName}
-                onChange={handleGroupChange}
-              />
+              Batch Size:
+              <input className={styles.input} type="number" name="batchSize" value={metadataInput.batchSize} onChange={handleMetadataInputChange} />
             </label>
 
-            {/* Conditional rendering based on the group availability status */}
-            {loading_c && <p>Loading...</p>}
-            {error_c && <p style={{ color: 'red' }}>{error_c}</p>}
-            {isGroupAvailable === null ? (
-              <p>Please check if the group is available.</p>
-            ) : isGroupAvailable ? (
-              ownedGroup ? (
-                <p>✅ You Own This Group!</p>
-              ) : (
-                <p>✅ The group name is available!</p>
-              )
+            <label className={styles.label}>
+              Starting Number:
+              <input className={styles.input} type="number" name="startingNumber" value={metadataInput.startingNumber} onChange={handleMetadataInputChange} />
+            </label>
+
+            <div>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={isOnChain}
+                  onChange={handleToggleOnChain}
+                />
+                <strong>: Toggle On-Chain / Off-Chain</strong>
+              </label>
+              <p>{isOnChain ? '⛓️ On-Chain' : '💾 Off-Chain'}</p>
+            </div>
+
+            {!isOnChain ? (
+              <div>
+                <label className={styles.label}>
+                  Group URI:
+                  <input className={styles.input} name="groupURI" value={metadataInput.groupURI} onChange={handleMetadataInputChange} />
+                </label>
+
+                <label className={styles.label}>
+                  Append Number to Group URI:
+                  <input
+                    className={styles.input}
+                    type="checkbox"
+                    name="appendNumberToGroupURI"
+                    checked={metadataInput.appendNumberToGroupURI === 1}  // ✅ Check if it equals 1
+                    onChange={(e) =>
+                      setMetadataInput((prev) => ({
+                        ...prev,
+                        appendNumberToGroupURI: e.target.checked ? 1 : 0  // ✅ Toggle between 1 and 0
+                      }))
+                    }
+                  />
+                </label>
+
+                <label className={styles.label}>
+                  Group URI Extension:
+                  <input className={styles.input} name="groupURIext" value={metadataInput.groupURIext} onChange={handleMetadataInputChange} />
+                </label>
+
+                <label className={styles.label}>
+                  Creator Address:
+                  <input className={styles.input} name="creator" value={metadata.creator} onChange={handleMetadataChange} />
+                </label>
+
+                <label className={styles.label}>
+                  Price ({NATIVE_TOKEN}):
+                  <input
+                    className={styles.input}
+                    name="price"
+                    value={metadata.price}
+                    onChange={handleMetadataChange}
+                    type="number"
+                    step="any" // Allows for decimal/floating-point numbers
+                    min="0"   // Prevents negative values
+                  />
+                </label>
+              </div>
             ) : (
-              <p>❌ The group name is taken or invalid.</p>
+              <></>
             )}
-
-            <button 
-              className={styles.attributesButton}
-              type="button" 
-              onClick={handleCheckGroup} 
-              disabled={!groupName} // Disable if group name is empty
-            >
-              Check Group
-            </button>
           </div>
-
-          <label className={styles.label}>
-            Batch Size:
-            <input className={styles.input} type="number" name="batchSize" value={metadataInput.batchSize} onChange={handleMetadataInputChange} />
-          </label>
-
-          <label className={styles.label}>
-            Starting Number:
-            <input className={styles.input} type="number" name="startingNumber" value={metadataInput.startingNumber} onChange={handleMetadataInputChange} />
-          </label>
-
+        ) : (
           <div>
+            <h2><strong>Token ID: {tokenId}</strong></h2>
+            <p>
+              <strong>Group:</strong>{' '}
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  router.push(`/groups/${tokenGroup.trim()}`);
+                }}
+              >
+                {tokenGroup}
+              </a>
+            </p>
+            <br></br>
             <label>
               <input
                 type="checkbox"
-                checked={isOnChain}
-                onChange={handleToggleOnChain}
+                checked={removeMetadata}
+                onChange={handleToggleRemoveMetadata}
               />
-              <strong>: Toggle On-Chain / Off-Chain</strong>
+              <strong>: Remove Metadata</strong>
             </label>
-            <p>{isOnChain ? '⛓️ On-Chain' : '💾 Off-Chain'}</p>
+            <p>{removeMetadata ? 'Remove Metadata' : 'Set Metadata'}</p>
           </div>
-          
-          {!isOnChain ? (
-            <div>
-              <label className={styles.label}>
-                Group URI:
-                <input className={styles.input} name="groupURI" value={metadataInput.groupURI} onChange={handleMetadataInputChange} />
-              </label>
-
-              <label className={styles.label}>
-                Append Number to Group URI:
-                <input
-                  className={styles.input}
-                  type="checkbox"
-                  name="appendNumberToGroupURI"
-                  checked={metadataInput.appendNumberToGroupURI === 1}  // ✅ Check if it equals 1
-                  onChange={(e) =>
-                    setMetadataInput((prev) => ({
-                      ...prev,
-                      appendNumberToGroupURI: e.target.checked ? 1 : 0  // ✅ Toggle between 1 and 0
-                    }))
-                  }
-                />
-              </label>
-
-              <label className={styles.label}>
-                Group URI Extension:
-                <input className={styles.input} name="groupURIext" value={metadataInput.groupURIext} onChange={handleMetadataInputChange} />
-              </label>
-
-              <label className={styles.label}>
-                Creator Address:
-                <input className={styles.input} name="creator" value={metadata.creator} onChange={handleMetadataChange} />
-              </label>
-
-              <label className={styles.label}>
-                Price ({NATIVE_TOKEN}):
-                <input 
-                  className={styles.input} 
-                  name="price" 
-                  value={metadata.price} 
-                  onChange={handleMetadataChange} 
-                  type="number" 
-                  step="any" // Allows for decimal/floating-point numbers
-                  min="0"   // Prevents negative values
-                />
-              </label>
-            </div>
-          ) : (
-            <></>
-          )}
-        </div>
+        )}
         <br></br>
-        
-        {isOnChain ? (
+
+        {isOnChain && !removeMetadata ? (
           <div>
             {/* ✅ Metadata Struct Fields */}
             <div className={styles.form}>
@@ -630,7 +678,7 @@ const SetMetadata = () => {
               <label className={styles.label}>
                 Background Color:
                 <p>{metadata.backgroundColor && `#${metadata.backgroundColor}`}</p>
-                
+
                 <input
                   className={styles.inputColor}
                   type="color"
@@ -645,7 +693,7 @@ const SetMetadata = () => {
                   ⊖ Remove BG Color
                 </button>
               )}
-              
+
               <div className={styles.radioGroup}>
                 {/* ✅ Animation URL Option */}
                 <label>
@@ -796,7 +844,7 @@ const SetMetadata = () => {
                 <div className={styles.attributesContainer}>
                   {attributes.map((attribute, index) => (
                     <div key={index} className={styles.attributeItem}>
-                      
+
                       {/* ✅ Trait Type */}
                       <label className={styles.attributeItemLabel}>
                         Trait Type:
@@ -864,35 +912,47 @@ const SetMetadata = () => {
                 <button className={styles.attributesButton} onClick={addAttribute}>⊕ Add Attribute</button>
               </div>
 
-              <label className={styles.label}>
-                Locked:
-                <input
-                  type="checkbox"
-                  name="locked"
-                  checked={metadata.locked === true} // Ensure it's a boolean
-                  onChange={handleMetadataChange}
-                />
-              </label>
+              {tokenId === null ? (
+                <label className={styles.label}>
+                  Locked:
+                  <input
+                    type="checkbox"
+                    name="locked"
+                    checked={metadata.locked === true} // Ensure it's a boolean
+                    onChange={handleMetadataChange}
+                  />
+                </label>
+              ):(
+                <></>
+              )}
+              
             </div>
             <br></br>
 
-            <label className={styles.label}>
-              Creator Address:
-              <input className={styles.input} name="creator" value={metadata.creator} onChange={handleMetadataChange} />
-            </label>
+            {tokenId === null ? (
+              <div>
+                <label className={styles.label}>
+                  Creator Address:
+                  <input className={styles.input} name="creator" value={metadata.creator} onChange={handleMetadataChange} />
+                </label>
 
-            <label className={styles.label}>
-              Price ({NATIVE_TOKEN}):
-              <input 
-                className={styles.input} 
-                name="price" 
-                value={metadata.price} 
-                onChange={handleMetadataChange} 
-                type="number" 
-                step="any" // Allows for decimal/floating-point numbers
-                min="0"   // Prevents negative values
-              />
-            </label>
+                <label className={styles.label}>
+                  Price ({NATIVE_TOKEN}):
+                  <input
+                    className={styles.input}
+                    name="price"
+                    value={metadata.price}
+                    onChange={handleMetadataChange}
+                    type="number"
+                    step="any" // Allows for decimal/floating-point numbers
+                    min="0"   // Prevents negative values
+                  />
+                </label>
+              </div>
+            ) : (
+              <></>
+            )}
+            
             <br></br>
           </div>
         ) : (

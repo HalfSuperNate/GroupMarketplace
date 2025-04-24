@@ -248,6 +248,7 @@ const TokenCard = ({ tokenId }: { tokenId: number }) => {
     if (!metadata && !jsonData) return null;
 
     const getFinalImageSrc = () => {
+        if (!tokenURI) return "/default-image.svg";
         if (metadata && metadata.image) {
             return resolveIPFS(metadata.image);
         }
@@ -256,6 +257,18 @@ const TokenCard = ({ tokenId }: { tokenId: number }) => {
         }
 
         return "/default-image.svg";
+    }
+
+    const getFinalName = () => {
+        if (!tokenURI) return `No Metadata Set For Token #${tokenId}`;
+        if (metadata && metadata.name) {
+            return metadata.name;
+        }
+        if (jsonData && jsonData.name) {
+            return jsonData.name;
+        }
+
+        return `Token #${tokenId}`;
     }
 
     return (
@@ -269,7 +282,7 @@ const TokenCard = ({ tokenId }: { tokenId: number }) => {
                 }}
             />
             {jsonError && <p className={styles.error}>Error: {jsonError}</p>}
-            <h2>{metadata?.name || jsonData?.name || `Token #${tokenId}`}</h2>
+            <h2>{getFinalName()}</h2>
             {/* <p>{metadata?.description || jsonData?.description || "No description"}</p> */}
             <p>
                 {isMinted

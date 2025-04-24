@@ -204,6 +204,56 @@ export const useContract = () => {
     }
   };
 
+  // Update Token Metadata
+  const updateMetadata = async (
+    tokenId: number,
+    removeMetadata: boolean,
+    metadata: {
+      name: string;
+      description: string;
+      externalUrl: string;
+      image: string;
+      animationUrl: string;
+      youtubeUrl: string;
+      backgroundColor: string;
+      attributes: string;
+      creator: string;
+      locked: boolean;
+      price: string;
+    },
+    onSuccess?: () => void
+  ) => {
+    try {
+      return await handleTransaction(
+        () => safeWriteContract({
+            functionName: "updateMetadata",
+            args: [
+              tokenId,                        // uint256 token ID
+              removeMetadata,                 // bool flag to remove metadata
+              [
+                metadata.name,                // string name
+                metadata.description,         // string description
+                metadata.externalUrl,         // string externalUrl
+                metadata.image,               // string image
+                metadata.animationUrl,        // string animationUrl
+                metadata.youtubeUrl,          // string youtubeUrl
+                metadata.backgroundColor,     // string backgroundColor
+                metadata.attributes,          // string attributes (encoded JSON string)
+                metadata.creator,             // address creator      *** ignored ***
+                metadata.locked,              // bool locked          *** ignored ***
+                parseEther(metadata.price)    // uint256 price in wei *** ignored ***
+              ]
+            ],
+          }),
+        "Token Metadata updated successfully!",
+        "Failed to update token metadata",
+        onSuccess
+      );
+    } catch (error) {
+      console.error("Error setting token metadata:", error);
+    }
+  };
+
   // Mint Token
   const mintToken = async (tokenId: number, price: bigint, onSuccess?: () => void) => {
     if (tokenId === null || price === undefined) return;
@@ -343,6 +393,7 @@ export const useContract = () => {
   return {
     loading,
     setMetadata,
+    updateMetadata,
     mintToken,
     listToken,
     buyToken,
