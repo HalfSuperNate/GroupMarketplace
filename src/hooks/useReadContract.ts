@@ -249,6 +249,7 @@ export const useFetchMetadata = (tokenId: number | undefined) => {
     metadata,
     loading: result.isLoading,
     error: result.isError ? "Failed to fetch metadata" : null,
+    refetchMetadata: result.refetch,
   };
 };
 

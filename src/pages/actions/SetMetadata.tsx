@@ -438,7 +438,7 @@ const SetMetadata = () => {
 
             <label className={styles.label}>
               Batch Size:
-              <input className={styles.input} type="number" name="batchSize" value={metadataInput.batchSize} onChange={handleMetadataInputChange} />
+              <input className={styles.input} type="number" name="batchSize" value={metadataInput.batchSize} min={1} onChange={handleMetadataInputChange} />
             </label>
 
             <label className={styles.label}>
@@ -965,7 +965,7 @@ const SetMetadata = () => {
           <pre className={styles.jsonPreview}>{JSON.stringify(buildMetadataArray(), null, 2)}</pre>
         </div>
 
-        <button className={styles.button} onClick={handleSubmit} disabled={loading}>
+        <button className={styles.button} onClick={handleSubmit} disabled={loading || !isGroupAvailable}>
           {loading ? <Spinner size="sm" color="white" /> : "Set Metadata"}
         </button>
       </main>

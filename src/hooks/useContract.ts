@@ -112,6 +112,7 @@ export const useContract = () => {
             console.log("Revert error name:", errorName);
           }
         }
+        if (!address) showToast("No Wallet Connected.", "error");
         showToast("Transaction canceled.", "info");
       });
   
@@ -390,6 +391,22 @@ export const useContract = () => {
     );
   };
 
+  // Set Lock Metadata
+  const setLockMetadata = async (
+    tokenId: number,
+    onSuccess?: () => void
+  ) => {
+    return await handleTransaction(
+      () => safeWriteContract({
+        functionName: "lockMetadata",
+        args: [tokenId]
+      }),
+      "Metadata locked successfully!",
+      "Failed to lock metadata",
+      onSuccess
+    );
+  };
+
   return {
     loading,
     setMetadata,
@@ -403,6 +420,7 @@ export const useContract = () => {
     setGroupURI,
     setNewGroupOwner,
     setGroupRestrictions,
+    setLockMetadata,
     txHash,
   };
 };

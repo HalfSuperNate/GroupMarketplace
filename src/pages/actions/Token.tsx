@@ -13,7 +13,7 @@ import Link from "next/link";
 
 const TokenAction = () => {
   const { address } = useAccount();
-  const { mintToken, listToken, cancelListing, buyToken, moveTokenToGroup, loading: isLoading } = useContract();
+  const { mintToken, listToken, cancelListing, buyToken, moveTokenToGroup, setLockMetadata, loading: isLoading } = useContract();
   const router = useRouter();
   const [tokenId, setTokenId] = useState<number | null>(null);
 
@@ -27,7 +27,7 @@ const TokenAction = () => {
     }
   }, [router.isReady, router.query.tokenId]);
 
-  const { metadata, loading, error } = useFetchMetadata(tokenId ?? 0);
+  const { metadata, loading, error, refetchMetadata } = useFetchMetadata(tokenId ?? 0);
   const { onChain, loading_a, error_a } = useFetchMetadataSet(tokenId ?? 0);
   const { tokenURI, loading_b, error_b } = useFetchTokenUri(tokenId ?? 0);
   const { isMinted, loading_d, error_d } = useFetchIsMinted(tokenId ?? 0);
@@ -258,6 +258,23 @@ const TokenAction = () => {
     return;
   };
 
+  const handleLockMetadata = async () => {
+    if (tokenId === null || tokenId < 0 || isLocked) return;
+
+    // Lock Metadata
+    try {
+      await setLockMetadata(tokenId, async () => {
+        if (refetchMetadata) {
+          const updated = await refetchMetadata();
+          console.log("Refetched is locked", updated);
+        }
+      });
+    } catch (error) {
+      console.error("Failed to lock metadata:", error);
+    }
+    return;
+  };
+
   const handlePurchase = async () => {
     if (tokenId === null || tokenId < 0 || !displayPrice) return;
     if (!isMinted) {
@@ -433,6 +450,7 @@ const TokenAction = () => {
                     <a className={styles.padLink} href={tokenURI} target="_blank" rel="external noopener noreferrer">💾 Off Chain</a>
                   </p>
                   <p><strong>Creator:</strong> {metadata.creator}</p>
+                  <p><strong>Locked:</strong> {metadata.locked ? "Yes" : "No"}</p>
                   <p>
                     {isMinted ? 
                       isListedAndActive ? 
@@ -578,12 +596,32 @@ const TokenAction = () => {
             )}
           </button>
           
-          {isTokenCreator ? (
-            <Link href={`/actions/SetMetadata?tokenId=${tokenId}`} passHref>
-              <p style={{ cursor: "pointer", color: 'lightblue', textDecoration: "underline" }}>
-                Edit Metadata for ID: {tokenId}
-              </p>
-            </Link> 
+          {isTokenCreator && !isLocked ? (
+            <div className={styles.metadataActions}>
+              <div className={styles.metadataLinkSection}>
+                <Link href={`/actions/SetMetadata?tokenId=${tokenId}`} passHref>
+                  <p className={styles.editLink}>
+                    ✏️ Edit Metadata for ID: {tokenId}
+                  </p>
+                </Link>
+              </div>
+            
+              <hr className={styles.divider} />
+            
+              <div className={styles.metadataButtonSection}>
+                <button
+                  className={styles.button}
+                  onClick={handleLockMetadata}
+                  disabled={isLoading || !metadata || !tokenURI || isLocked}
+                >
+                  {isLoading ? (
+                    <Spinner size="sm" color="white" />
+                  ) : (
+                    "Click to Lock Metadata 🔒"
+                  )}
+                </button>
+              </div>
+            </div>
           ):(<></>)}
           
           {/* ✅ Display Cancel Listing Options if token owner */}
