@@ -3,7 +3,7 @@
 import { useRouter } from 'next/router';
 import { useState, useEffect, useCallback } from "react";
 import { useContract, NATIVE_TOKEN } from "../../hooks/useContract";
-import { useFetchGroupOwner, useFetchTokenGroup } from "../../hooks/useReadContract";
+import { useFetchGroupOwner, useFetchTokenGroup, useFetchMetadata } from "../../hooks/useReadContract";
 import { Spinner } from "@chakra-ui/react";
 import styles from "../../styles/Home.module.css";
 import { parseEther } from 'viem'
@@ -22,20 +22,10 @@ const SetMetadata = () => {
 
   const router = useRouter();
   const [tokenId, setTokenId] = useState<number | null>(null);
+  const { metadata: tokenMetadata, loading: tokenLoading, error, refetchMetadata } = useFetchMetadata(tokenId ?? 0);
 
-  // Read tokenId from query on mount
-  useEffect(() => {
-    if (router.isReady && router.query.tokenId) {
-      const queryTokenId = parseInt(router.query.tokenId as string);
-      if (!isNaN(queryTokenId)) {
-        setTokenId(queryTokenId);
-      }
-    }
-  }, [router.isReady, router.query.tokenId]);
-
-  console.log("Token ID has been set: ", tokenId);
-
-  // 🔳 TO DO: if tokenId is not null set this up to updateMetadata on that specific token
+  // ✅: if tokenId is not null set this up to updateMetadata on that specific token
+  // ✅: this can create a new group with token's metadata or add to existing group
 
   // ✅ State for form inputs
   const [metadataInput, setMetadataInput] = useState({
@@ -65,6 +55,71 @@ const SetMetadata = () => {
     locked: false,
     price: "0",
   });
+
+  // Read tokenId from query on mount
+  useEffect(() => {
+    if (router.isReady && router.query.tokenId) {
+      const queryTokenId = parseInt(router.query.tokenId as string);
+      if (!isNaN(queryTokenId)) {
+        setTokenId(queryTokenId);
+        setMetadataStruct({
+          ...metadata,
+          name: tokenMetadata?.name || "",
+          description: tokenMetadata?.description || "",
+          externalUrl: tokenMetadata?.externalUrl || "",
+          image: tokenMetadata?.image || "",
+          animationUrl: tokenMetadata?.animationUrl || "",
+          youtubeUrl: tokenMetadata?.youtubeUrl || "",
+          backgroundColor: tokenMetadata?.backgroundColor || "",
+          attributes: tokenMetadata?.attributes || "",
+          creator: tokenMetadata?.creator || "",
+          locked: tokenMetadata?.locked || false,
+          price: "0",
+        });
+
+        if (tokenMetadata?.animationUrl.length == 0 && tokenMetadata?.youtubeUrl.length == 0) {
+          setMediaType("none");
+        } else {
+          if (tokenMetadata?.animationUrl.length != 0) {
+            setMediaType("animation");
+          } else {
+            setMediaType("youtube");
+          }
+        }
+
+        if (tokenMetadata?.attributes) {
+          if (tokenMetadata?.attributes.includes("[object Object]") || tokenMetadata?.attributes.includes('"attributes":}')) {
+            setAttributes([]);
+            return;
+          }
+          try {
+            const parsed = JSON.parse(tokenMetadata.attributes);
+            if (Array.isArray(parsed)) {
+              const formattedAttributes: Attribute[] = parsed.map((attr: any) => ({
+                trait_type: attr.trait_type || "",
+                value: attr.value?.toString() || "",
+                display_type: attr.display_type || undefined,
+              }));
+              setAttributes(formattedAttributes);
+            } else {
+              setAttributes([{ trait_type: "", value: "", display_type: undefined }]);
+              console.log(attributes);
+            }
+          } catch (err) {
+            console.error("Failed to parse attributes JSON:", err);
+          }
+        } else {
+          if (attributes.length > 0) {
+            removeAttribute(attributes.length);
+            setAttributes([]);
+          }
+          console.log(attributes);
+        }
+      }
+    }
+  }, [router.isReady, router.query.tokenId, tokenId]);
+
+  console.log("Token ID has been set: ", tokenId);
 
   // ✅ State for attributes (define the type properly)
   const [attributes, setAttributes] = useState<Attribute[]>([]);
@@ -356,7 +411,7 @@ const SetMetadata = () => {
     // console.log(jsonArray);
 
     try {
-      if(tokenId === null) {
+      if (tokenId === null) {
         await setMetadata(
           jsonArray[0] as string,
           jsonArray[1] as number,
@@ -386,7 +441,15 @@ const SetMetadata = () => {
     } catch (error) {
       console.error("Failed to fetch token group:", error);
     }
-    
+
+  };
+
+  // State to manage dropdown visibility
+  const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+
+  // Function to toggle the visibility
+  const toggleDropdown = () => {
+    setIsDropdownVisible((prev) => !prev);
   };
 
   return (
@@ -922,10 +985,10 @@ const SetMetadata = () => {
                     onChange={handleMetadataChange}
                   />
                 </label>
-              ):(
+              ) : (
                 <></>
               )}
-              
+
             </div>
             <br></br>
 
@@ -952,7 +1015,7 @@ const SetMetadata = () => {
             ) : (
               <></>
             )}
-            
+
             <br></br>
           </div>
         ) : (
@@ -960,12 +1023,22 @@ const SetMetadata = () => {
         )}
 
         {/* ✅ JSON Preview */}
-        <div className={styles.form}>
-          <h2>JSON Preview</h2>
-          <pre className={styles.jsonPreview}>{JSON.stringify(buildMetadataArray(), null, 2)}</pre>
+        <div>
+          <button onClick={toggleDropdown} className={styles.toggleButton}>
+            {isDropdownVisible ? 'Hide {JSON}' : '{JSON}'}
+          </button>
+
+          {isDropdownVisible && (
+            <div className={styles.form}>
+              <h2>JSON Preview</h2>
+              <pre className={styles.jsonPreview}>
+                {JSON.stringify(buildMetadataArray(), null, 2)}
+              </pre>
+            </div>
+          )}
         </div>
 
-        <button className={styles.button} onClick={handleSubmit} disabled={loading || !isGroupAvailable}>
+        <button className={styles.button} onClick={handleSubmit} disabled={loading || (tokenId === null && !isGroupAvailable)}>
           {loading ? <Spinner size="sm" color="white" /> : "Set Metadata"}
         </button>
       </main>
