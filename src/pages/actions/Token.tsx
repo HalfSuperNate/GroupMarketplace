@@ -27,10 +27,10 @@ const TokenAction = () => {
     }
   }, [router.isReady, router.query.tokenId]);
 
-  const { metadata, loading, error, refetchMetadata } = useFetchMetadata(tokenId ?? 0);
+  const { metadata, loading, error, refetch: refetchMetadata } = useFetchMetadata(tokenId ?? 0);
   const { onChain, loading_a, error_a } = useFetchMetadataSet(tokenId ?? 0);
   const { tokenURI, loading_b, error_b } = useFetchTokenUri(tokenId ?? 0);
-  const { isMinted, loading_d, error_d } = useFetchIsMinted(tokenId ?? 0);
+  const { isMinted, refetch: refetch_d } = useFetchIsMinted(tokenId ?? 0);
   const { listing, loading_f, error_f, refetch_f } = useFetchListing(tokenId ?? 0);
   const { tokenOwner, loading_g, error_g } = useFetchTokenOwner(tokenId ?? 0);
   const isTokenOwner = address === tokenOwner || false;
@@ -62,6 +62,12 @@ const TokenAction = () => {
   // Destructure the result from the useFetchGroupOwner hook
   const { groupOwner, loading_c, error_c } = useFetchGroupOwner(groupName);
 
+  // Loading States
+  const [isLockingMetadata, setIsLockingMetadata] = useState(false);
+  const [isCancelingListing, setIsCancelingListing] = useState(false);
+  const [isMintingBuying, setIsMintingBuying] = useState(false);
+  const [isMovingToken, setIsMovingToken] = useState(false);
+
   const handleGroupChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setGroupName(e.target.value);
     setIsGroupAvailable(null);
@@ -90,29 +96,6 @@ const TokenAction = () => {
     } else {
       setIsGroupAvailable(false);
       setIsOwned(false);
-    }
-  };
-
-  // ✅ Handle submit move token
-  const handleSubmitMoveToken = async () => {
-    if (tokenId === null || groupName === '') return;
-    let price = 0n;
-
-    if (isGroupAvailable && !ownedGroup) {
-      price = newGroupFee;
-    }
-  
-    try {
-      await moveTokenToGroup(
-        tokenId, 
-        groupName, 
-        price,
-      async () => {
-        const updated = await refetch_h();
-        console.log("Refetched token group:", updated);
-      });
-    } catch (error) {
-      console.error("Failed to fetch token group:", error);
     }
   };
 
@@ -243,23 +226,20 @@ const TokenAction = () => {
     setInputExpiration(expirationUnix);
   }, [inputDate, inputHour, inputMinute, inputSecond]);
 
-  const handleCancel = async () => {
-    if (tokenId === null || tokenId < 0 || !isListedAndActive) return;
-
-    // Cancel Sale
-    try {
-      await cancelListing(tokenId, async () => {
-        const updated = await refetch_f();
-        console.log("Refetched listing:", updated);
-      });
-    } catch (error) {
-      console.error("Failed to cancel listing:", error);
-    }
-    return;
-  };
-
   const handleLockMetadata = async () => {
     if (tokenId === null || tokenId < 0 || isLocked) return;
+
+    setIsLockingMetadata(true);
+
+    const confirmation = window.prompt(
+        `You are about to lock metadata of token ID "${tokenId}"\n\nIf this is correct, type "lock" to confirm.`
+    );
+
+    if (confirmation?.toLowerCase() !== "lock") {
+        console.log("Metadata lock canceled by user.");
+        setIsLockingMetadata(false);
+        return;
+    }
 
     // Lock Metadata
     try {
@@ -271,21 +251,47 @@ const TokenAction = () => {
       });
     } catch (error) {
       console.error("Failed to lock metadata:", error);
+    } finally {
+      setIsLockingMetadata(false);
+    }
+    return;
+  };
+
+  const handleCancel = async () => {
+    if (tokenId === null || tokenId < 0 || !isListedAndActive) return;
+
+    setIsCancelingListing(true);
+
+    // Cancel Sale
+    try {
+      await cancelListing(tokenId, async () => {
+        const updated = await refetch_f();
+        console.log("Refetched listing:", updated);
+      });
+    } catch (error) {
+      console.error("Failed to cancel listing:", error);
+    } finally {
+      setIsCancelingListing(false);
     }
     return;
   };
 
   const handlePurchase = async () => {
     if (tokenId === null || tokenId < 0 || !displayPrice) return;
+    setIsMintingBuying(true);
     if (!isMinted) {
       // Mint Token
       try {
         await mintToken(tokenId, displayPrice, async () => {
-          const updated = await refetch_f();
-          console.log("Refetched listing:", updated);
+          const updated_f = await refetch_f();
+          const updated_d = await refetch_d();
+          console.log("Refetched listing:", updated_f);
+          console.log("Refetched mint status:", updated_d);
         });
       } catch (error) {
         console.error("Failed to mint token:", error);
+      } finally {
+        setIsMintingBuying(false);
       }
       return;
     }
@@ -298,8 +304,37 @@ const TokenAction = () => {
         });
       } catch (error) {
         console.error("Failed to buy token:", error);
+      } finally {
+        setIsMintingBuying(false);
       }
       return;
+    }
+  };
+
+  // ✅ Handle submit move token
+  const handleSubmitMoveToken = async () => {
+    if (tokenId === null || groupName === '') return;
+    let price = 0n;
+
+    if (isGroupAvailable && !ownedGroup) {
+      price = newGroupFee;
+    }
+
+    setIsMovingToken(true);
+  
+    try {
+      await moveTokenToGroup(
+        tokenId, 
+        groupName, 
+        price,
+      async () => {
+        const updated = await refetch_h();
+        console.log("Refetched token group:", updated);
+      });
+    } catch (error) {
+      console.error("Failed to fetch token group:", error);
+    } finally {
+      setIsMovingToken(false);
     }
   };
 
@@ -585,7 +620,7 @@ const TokenAction = () => {
               (isMinted && (!isListedAndActive || displayPrice === undefined))
             }
           >
-            {isLoading ? (
+            {isMintingBuying ? (
               <Spinner size="sm" color="white" />
             ) : !isMinted && displayPrice !== undefined ? (
               `Mint Token ${formatEther(displayPrice)} ${NATIVE_TOKEN}`
@@ -597,29 +632,32 @@ const TokenAction = () => {
           </button>
           
           {isTokenCreator && !isLocked ? (
-            <div className={styles.metadataActions}>
-              <div className={styles.metadataLinkSection}>
-                <Link href={`/actions/SetMetadata?tokenId=${tokenId}`} passHref>
-                  <p className={styles.editLink}>
-                    ✏️ Edit Metadata for ID: {tokenId}
-                  </p>
-                </Link>
-              </div>
-            
+            <div>
               <hr className={styles.divider} />
-            
-              <div className={styles.metadataButtonSection}>
-                <button
-                  className={styles.button}
-                  onClick={handleLockMetadata}
-                  disabled={isLoading || !metadata || !tokenURI || isLocked}
-                >
-                  {isLoading ? (
-                    <Spinner size="sm" color="white" />
-                  ) : (
-                    "Click to Lock Metadata 🔒"
-                  )}
-                </button>
+              <div className={styles.metadataActions}>
+                <div className={styles.metadataLinkSection}>
+                  <Link href={`/actions/SetMetadata?tokenId=${tokenId}`} passHref>
+                    <p className={styles.editLink}>
+                      ✏️ Edit Metadata for ID: {tokenId}
+                    </p>
+                  </Link>
+                </div>
+              
+                <hr className={styles.divider} />
+              
+                <div className={styles.metadataButtonSection}>
+                  <button
+                    className={styles.button}
+                    onClick={handleLockMetadata}
+                    disabled={isLoading || !metadata || !tokenURI || isLocked}
+                  >
+                    {isLockingMetadata ? (
+                      <Spinner size="sm" color="white" />
+                    ) : (
+                      "Click to Lock Metadata 🔒"
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           ):(<></>)}
@@ -636,7 +674,7 @@ const TokenAction = () => {
                   isLoading || !isListedAndActive
                 }
               >
-                {isLoading ? (
+                {isCancelingListing ? (
                   <Spinner size="sm" color="white" />
                 ) : isListedAndActive ? (
                   `Cancel Sale`
@@ -651,7 +689,7 @@ const TokenAction = () => {
           
           {/* ✅ Display Listing Options if token owner */}
           {isTokenOwner && isMinted ? (
-            <div className={styles.form}>
+            <div>
               <hr></hr>
               <h1 className={styles.title}>Sell Token</h1>
               <label className={styles.label}>
@@ -752,7 +790,7 @@ const TokenAction = () => {
 
           {/* ✅ Display Move token to group options */}
           {isTokenCreator && !isLocked ? (
-            <div className={styles.form}>
+            <div>
               <hr></hr>
               <h1 className={styles.title}>Move Token To Group</h1>
               <label className={styles.label}>
@@ -789,7 +827,7 @@ const TokenAction = () => {
                 Check Group
               </button>
               <button className={styles.button} onClick={handleSubmitMoveToken} disabled={loading || !isGroupAvailable}>
-                {loading ? <Spinner size="sm" color="white" /> : "Move Token"}
+                {isMovingToken ? <Spinner size="sm" color="white" /> : "Move Token"}
               </button>
             </div>
           ) : (

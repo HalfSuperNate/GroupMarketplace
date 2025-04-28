@@ -3,7 +3,7 @@
 import { useRouter } from 'next/router';
 import { useState, useEffect, useCallback } from "react";
 import { useContract, NATIVE_TOKEN } from "../../hooks/useContract";
-import { useFetchGroupOwner, useFetchTokenGroup, useFetchMetadata } from "../../hooks/useReadContract";
+import { useFetchGroupOwner, useFetchTokenGroup, useFetchMetadata, useFetchMetadataSet, useFetchTokenUri } from "../../hooks/useReadContract";
 import { Spinner } from "@chakra-ui/react";
 import styles from "../../styles/Home.module.css";
 import { parseEther } from 'viem'
@@ -22,7 +22,9 @@ const SetMetadata = () => {
 
   const router = useRouter();
   const [tokenId, setTokenId] = useState<number | null>(null);
-  const { metadata: tokenMetadata, loading: tokenLoading, error, refetchMetadata } = useFetchMetadata(tokenId ?? 0);
+  const { metadata: tokenMetadata, loading: tokenLoading, error, refetch: refetchMetadata } = useFetchMetadata(tokenId ?? 0);
+  const { onChain, loading_a, error_a } = useFetchMetadataSet(tokenId ?? 0);
+  const { tokenURI, loading_b, error_b } = useFetchTokenUri(tokenId ?? 0);
 
   // ✅: if tokenId is not null set this up to updateMetadata on that specific token
   // ✅: this can create a new group with token's metadata or add to existing group
@@ -113,13 +115,14 @@ const SetMetadata = () => {
             removeAttribute(attributes.length);
             setAttributes([]);
           }
-          console.log(attributes);
+          //console.log(attributes);
         }
       }
     }
   }, [router.isReady, router.query.tokenId, tokenId]);
 
   console.log("Token ID has been set: ", tokenId);
+  console.log("Token ID is onChain: ", onChain);
 
   // ✅ State for attributes (define the type properly)
   const [attributes, setAttributes] = useState<Attribute[]>([]);
@@ -427,13 +430,13 @@ const SetMetadata = () => {
           jsonArray[11] as string,
         );
       } else {
-        //setMetadataStruct((prev) => ({ ...prev, creator: address as string, locked: false}));
-        //console.log(metadata);
         await updateMetadata(
           tokenId,
           removeMetadata,
           { ...metadata, attributes: attributesString, creator: address as string, locked: false }, // Correctly formatted attributes
           async () => {
+            const updated_h = await refetch_h();
+            console.log("Refetched token metadata:", updated_h);
             console.log("Updated Token Metadata");
           }
         );

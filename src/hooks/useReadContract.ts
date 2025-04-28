@@ -202,7 +202,19 @@ export const useGetTotalSupply = (contractAddress: Address) => {
 // ✅ Custom hook for fetching metadata
 export const useFetchMetadata = (tokenId: number | undefined) => {
   if (tokenId === undefined) {
-    return { metadata: null, loading: false, error: null };
+    return { metadata: {
+      name: "",
+      description: "",
+      externalUrl: "",
+      image: "",
+      animationUrl: "",
+      youtubeUrl: "",
+      backgroundColor: "",
+      attributes: "",       // Empty string for JSON attributes
+      creator: "0x0000000000000000000000000000000000000000",  // Dummy empty address
+      locked: false,
+      price: BigInt(0),
+    }, loading: false, error: null, refetch: async () => null };
   }
   const result = useReadContract({
     abi: contractABI,
@@ -249,7 +261,7 @@ export const useFetchMetadata = (tokenId: number | undefined) => {
     metadata,
     loading: result.isLoading,
     error: result.isError ? "Failed to fetch metadata" : null,
-    refetchMetadata: result.refetch,
+    refetch: result.refetch,
   };
 };
 
@@ -320,7 +332,7 @@ export const useFetchGroupOwner = (groupName: string) => {
 
 export const useFetchIsMinted = (tokenId: number | undefined) => {
   if (tokenId === undefined) {
-    return { isMinted: false, loading_d: false, error_d: null };
+    return { isMinted: false, loading_d: false, error_d: null, refetch: async () => null };
   }
   const result = useReadContract({
     abi: contractABI,
@@ -338,6 +350,7 @@ export const useFetchIsMinted = (tokenId: number | undefined) => {
     isMinted,
     loading_d: result.isLoading,
     error_d: result.isError ? "Failed to fetch is minted flag" : null,
+    refetch: result.refetch,
   };
 };
 

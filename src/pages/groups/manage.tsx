@@ -178,7 +178,7 @@ const ManageGroup = () => {
             <Navbar />
             <div className={styles.groupManageContainer}>
                 <h1 className={styles.title}>
-                    {`Manage Group: `}
+                    {`Manage Group: `} <br></br>
                     <a
                         href="#"
                         onClick={(e) => {
