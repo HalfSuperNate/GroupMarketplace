@@ -221,6 +221,7 @@
   border-width: 2px;
   display: block;
   margin-top: 8px;
+  color: firebrick;
 }
 
 .attributesRemoveButton:hover {
@@ -233,10 +234,15 @@
   width: 100%;
 }
 
+.attributeItem {
+  border-width: thin;
+}
+
 .attributeItemLabel {
   display: inline-grid;
   grid-column: 1;
   width: 100%;
+  color: #aaa;
 }
 
 .attributeItemInput {

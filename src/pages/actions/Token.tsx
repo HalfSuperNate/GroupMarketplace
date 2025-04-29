@@ -166,7 +166,7 @@ const TokenAction = () => {
   
       // ✅ Handle Base64-encoded on-chain metadata
       if (tokenURI.startsWith("data:application/json;base64,")) {
-        console.log("On-chain Base64 detected");
+        //console.log("On-chain Base64 detected");
         const base64Data = tokenURI.split(",")[1];
   
         const decodedJson = decodeBase64Json(base64Data);

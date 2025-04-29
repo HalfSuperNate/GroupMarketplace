@@ -64,65 +64,104 @@ const SetMetadata = () => {
       const queryTokenId = parseInt(router.query.tokenId as string);
       if (!isNaN(queryTokenId)) {
         setTokenId(queryTokenId);
-        setMetadataStruct({
-          ...metadata,
-          name: tokenMetadata?.name || "",
-          description: tokenMetadata?.description || "",
-          externalUrl: tokenMetadata?.externalUrl || "",
-          image: tokenMetadata?.image || "",
-          animationUrl: tokenMetadata?.animationUrl || "",
-          youtubeUrl: tokenMetadata?.youtubeUrl || "",
-          backgroundColor: tokenMetadata?.backgroundColor || "",
-          attributes: tokenMetadata?.attributes || "",
-          creator: tokenMetadata?.creator || "",
-          locked: tokenMetadata?.locked || false,
-          price: "0",
-        });
-
-        if (tokenMetadata?.animationUrl.length == 0 && tokenMetadata?.youtubeUrl.length == 0) {
-          setMediaType("none");
-        } else {
-          if (tokenMetadata?.animationUrl.length != 0) {
-            setMediaType("animation");
-          } else {
-            setMediaType("youtube");
-          }
-        }
-
-        if (tokenMetadata?.attributes) {
-          if (tokenMetadata?.attributes.includes("[object Object]") || tokenMetadata?.attributes.includes('"attributes":}')) {
-            setAttributes([]);
-            return;
-          }
-          try {
-            const parsed = JSON.parse(tokenMetadata.attributes);
-            if (Array.isArray(parsed)) {
-              const formattedAttributes: Attribute[] = parsed.map((attr: any) => ({
-                trait_type: attr.trait_type || "",
-                value: attr.value?.toString() || "",
-                display_type: attr.display_type || undefined,
-              }));
-              setAttributes(formattedAttributes);
-            } else {
-              setAttributes([{ trait_type: "", value: "", display_type: undefined }]);
-              console.log(attributes);
-            }
-          } catch (err) {
-            console.error("Failed to parse attributes JSON:", err);
-          }
-        } else {
-          if (attributes.length > 0) {
-            removeAttribute(attributes.length);
-            setAttributes([]);
-          }
-          //console.log(attributes);
-        }
       }
     }
   }, [router.isReady, router.query.tokenId, tokenId]);
 
-  console.log("Token ID has been set: ", tokenId);
-  console.log("Token ID is onChain: ", onChain);
+  // ✅ IPFS to HTTP resolution function
+  const resolveIPFS = (uri: string): string => {
+    if (!uri) return "";
+    if (uri.startsWith("ipfs://")) {
+      const ipfsHash = uri.replace("ipfs://", "");
+      return `https://ipfs.io/ipfs/${ipfsHash}`;
+    }
+    return uri; // If it's already HTTP, return as is
+  };
+
+  useEffect(() => {
+    const loadMetadata = async () => {
+      if (!router.isReady || tokenId === null) return;
+  
+      try {
+        let finalMetadata: any = {};
+  
+        if (onChain) {
+          // Use on-chain metadata
+          finalMetadata = tokenMetadata;
+        } else if (tokenURI) {
+          // Fetch off-chain metadata
+          const response = await fetch(resolveIPFS(tokenURI));
+          finalMetadata = await response.json();
+        }
+  
+        // Update the metadata struct
+        setMetadataStruct({
+          name: finalMetadata.name || "",
+          description: finalMetadata.description || "",
+          externalUrl: finalMetadata.externalUrl || "",
+          image: finalMetadata.image || "",
+          animationUrl: finalMetadata.animationUrl || "",
+          youtubeUrl: finalMetadata.youtubeUrl || "",
+          backgroundColor: finalMetadata.backgroundColor || "",
+          attributes: JSON.stringify(finalMetadata.attributes || []), // Force attributes to be string
+          creator: finalMetadata.creator || "0x0000000000000000000000000000000000000000",
+          locked: finalMetadata.locked || false,
+          price: "0",
+        });
+        
+        if ((!finalMetadata.animationUrl && !finalMetadata.youtubeUrl) || finalMetadata.animationUrl.length == 0 && finalMetadata.youtubeUrl.length == 0) {
+          setMediaType("none");
+        } else {
+          if (finalMetadata.animationUrl && finalMetadata.animationUrl.length != 0) {
+            setMediaType("animation");
+          } else if (finalMetadata.youtubeUrl && finalMetadata.youtubeUrl.length != 0) {
+            setMediaType("youtube");
+          } else {
+            setMediaType("none");
+          }
+        }
+
+        // Now separately handle attributes parsing
+        if (finalMetadata.attributes) {
+          if (
+            typeof finalMetadata.attributes === "string" &&
+            (finalMetadata.attributes.includes("[object Object]") || finalMetadata.attributes.includes('"attributes":}'))
+          ) {
+            setAttributes([]);
+            return;
+          }
+          const parsed = Array.isArray(finalMetadata.attributes)
+            ? finalMetadata.attributes
+            : JSON.parse(finalMetadata.attributes);
+  
+          if (Array.isArray(parsed)) {
+            const formattedAttributes: Attribute[] = parsed.map((attr: any) => {
+              const hasOnlyValue = attr.value && !attr.trait_type;
+      
+              return {
+                trait_type: hasOnlyValue ? "" : (attr.trait_type || ""),
+                value: attr.value?.toString() || "",
+                display_type: hasOnlyValue ? "value_only" : (attr.display_type || undefined),
+              };
+            });
+            setAttributes(formattedAttributes);
+          } else {
+            setAttributes([{ trait_type: "", value: "", display_type: undefined }]);
+          }
+        } else {
+          setAttributes([{ trait_type: "", value: "", display_type: undefined }]);
+        }
+      } catch (err) {
+        console.error("Failed to load metadata:", err);
+        setAttributes([{ trait_type: "", value: "", display_type: undefined }]);
+      }
+    };
+  
+    loadMetadata();
+  }, [router.isReady, router.query.tokenId, tokenId]);
+  
+  // console.log("Token ID has been set: ", tokenId);
+  // console.log("Token ID is onChain: ", onChain);
 
   // ✅ State for attributes (define the type properly)
   const [attributes, setAttributes] = useState<Attribute[]>([]);
