@@ -22,9 +22,9 @@ const SetMetadata = () => {
 
   const router = useRouter();
   const [tokenId, setTokenId] = useState<number | null>(null);
-  const { metadata: tokenMetadata, loading: tokenLoading, error, refetch: refetchMetadata } = useFetchMetadata(tokenId ?? 0);
-  const { onChain, loading_a, error_a } = useFetchMetadataSet(tokenId ?? 0);
-  const { tokenURI, loading_b, error_b } = useFetchTokenUri(tokenId ?? 0);
+  const { metadata: tokenMetadata, loading: tokenLoading, refetch: refetchMetadata } = useFetchMetadata(tokenId ?? 0);
+  const { onChain } = useFetchMetadataSet(tokenId ?? 0);
+  const { tokenURI } = useFetchTokenUri(tokenId ?? 0);
 
   // ✅: if tokenId is not null set this up to updateMetadata on that specific token
   // ✅: this can create a new group with token's metadata or add to existing group

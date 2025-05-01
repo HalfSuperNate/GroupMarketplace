@@ -28,21 +28,21 @@ const TokenAction = () => {
   }, [router.isReady, router.query.tokenId]);
 
   const { metadata, loading, error, refetch: refetchMetadata } = useFetchMetadata(tokenId ?? 0);
-  const { onChain, loading_a, error_a } = useFetchMetadataSet(tokenId ?? 0);
-  const { tokenURI, loading_b, error_b } = useFetchTokenUri(tokenId ?? 0);
+  const { onChain } = useFetchMetadataSet(tokenId ?? 0);
+  const { tokenURI } = useFetchTokenUri(tokenId ?? 0);
   const { isMinted, refetch: refetch_d } = useFetchIsMinted(tokenId ?? 0);
-  const { listing, loading_f, error_f, refetch_f } = useFetchListing(tokenId ?? 0);
-  const { tokenOwner, loading_g, error_g } = useFetchTokenOwner(tokenId ?? 0);
+  const { listing, refetch_f } = useFetchListing(tokenId ?? 0);
+  const { tokenOwner } = useFetchTokenOwner(tokenId ?? 0);
   const isTokenOwner = address === tokenOwner || false;
   const isTokenCreator = address === metadata?.creator || false;
   const isLocked = metadata?.locked || false;
-  const { tokenGroup, loading_h, error_h, refetch_h } = useFetchTokenGroup(tokenId ?? 0);
+  const { tokenGroup, refetch_h } = useFetchTokenGroup(tokenId ?? 0);
 
   const now = Math.floor(Date.now() / 1000); // current Unix timestamp
   const isListedAndActive = !!(listing?.active && listing.expiration > now);
   const displayPrice = isMinted ? listing?.price : metadata?.price;
 
-  const { newGroupFee, loading_j, error_j } = useFetchNewGroupPrice();
+  const { newGroupFee } = useFetchNewGroupPrice();
 
   const [inputSalePrice, setInputSalePrice] = useState<number>(0);
   const [inputDate, setInputDate] = useState<string>("");
