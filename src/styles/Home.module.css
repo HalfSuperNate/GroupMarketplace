@@ -504,3 +504,58 @@
   text-align: center;
 }
 
+.storageContainer {
+  background-color: transparent;
+  min-height: 100vh;
+}
+
+.storageContent {
+  max-width: 768px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.storageHeading {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.storageSubheading {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.storageParagraph {
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+.storageList {
+  list-style: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.storageListNested {
+  list-style: circle;
+  padding-left: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.storageLink {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.storageSection {
+  margin-bottom: 2rem;
+}
+
+.storageCitation {
+  font-size: 0.875rem;
+  color: #4b5563;
+  margin-top: 2rem;
+}
+

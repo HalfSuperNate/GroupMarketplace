@@ -5,6 +5,8 @@ import styles from '../styles/Home.module.css';
 import Link from 'next/link';
 import Navbar from "@/components/Navbar";
 
+//🔳 TO DO: set up storage option link page with details of each option.
+
 const Home: NextPage = () => {
   return (
     <div className={styles.container}>
@@ -47,6 +49,13 @@ const Home: NextPage = () => {
             <a className={styles.card}>
               <h2>Browse &rarr;</h2>
               <p>Take a look at what's on Group Market. 👁️〰️👁️</p>
+            </a>
+          </Link>
+
+          <Link href="/actions/Storage" legacyBehavior>
+            <a className={styles.card}>
+              <h2>Storage &rarr;</h2>
+              <p>Data storage is necessary for all NFT projects. Take a look at some options.</p>
             </a>
           </Link>
 
