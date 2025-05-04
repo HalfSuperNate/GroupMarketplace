@@ -349,10 +349,6 @@ export const useFetchTokensInGroup = (groupName: string) => {
 };
 
 export const useFetchListing = (tokenId: number | undefined) => {
-  if (tokenId === undefined) {
-    return { listing: null, loading_f: false, error_f: null, refetch_f: async () => null };
-  }
-
   const result = useReadContract({
     abi: contractABI,
     address: CONTRACT_ADDRESS,
@@ -383,9 +379,6 @@ export const useFetchListing = (tokenId: number | undefined) => {
 };
 
 export const useFetchTokenOwner = (tokenId: number | undefined) => {
-  if (tokenId === undefined) {
-    return { tokenOwner: null, loading_g: false, error_g: null };
-  }
   const result = useReadContract({
     abi: contractABI,
     address: CONTRACT_ADDRESS,
