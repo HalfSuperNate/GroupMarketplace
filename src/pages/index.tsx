@@ -48,7 +48,7 @@ const Home: NextPage = () => {
           <Link href="/groups/" legacyBehavior>
             <a className={styles.card}>
               <h2>Browse &rarr;</h2>
-              <p>Take a look at what's on Group Market. 👁️〰️👁️</p>
+              <p>Take a look at what&apos;s on Group Market. 👁️〰️👁️</p>
             </a>
           </Link>
 

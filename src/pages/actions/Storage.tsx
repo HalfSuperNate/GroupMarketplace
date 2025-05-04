@@ -11,7 +11,7 @@ const Storage = () => {
         <h1 className={styles.storageHeading}>🔐 NFT Storage:<br></br> Decentralized Options Overview</h1>
 
         <p className={styles.storageParagraph}>
-          When storing NFTs, it's crucial to ensure both metadata and media are securely and permanently accessible. The following are
+          When storing NFTs, it&apos;s crucial to ensure both metadata and media are securely and permanently accessible. The following are
           popular decentralized storage solutions based on the article{" "}
           <a
             href="https://metaversal.banklesshq.com/p/nft-storage"
@@ -19,7 +19,7 @@ const Storage = () => {
             rel="noopener noreferrer"
             className={styles.storageLink}
           >
-            "NFT Storage: Comparing IPFS, Filecoin, and Arweave" by William M. Peaster
+            &quot;NFT Storage: Comparing IPFS, Filecoin, and Arweave&quot; by William M. Peaster
           </a>.
         </p>
 
@@ -108,7 +108,7 @@ const Storage = () => {
         </section>
 
         <p className={styles.storageCitation}>
-            Source: <em>"NFT Storage: Comparing IPFS, Filecoin, and Arweave"</em> by William M. Peaster, published via{" "}
+            Source: <em>&quot;NFT Storage: Comparing IPFS, Filecoin, and Arweave&quot;</em> by William M. Peaster, published via{" "}
             <a
                 href="https://metaversal.banklesshq.com/p/nft-storage"
                 target="_blank"

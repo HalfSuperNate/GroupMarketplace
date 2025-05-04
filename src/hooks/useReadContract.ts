@@ -78,6 +78,20 @@ export const getMarketplaceAssetURL = (marketplace: string, chainId: number, con
   }
 };
 
+export const EMPTY_METADATA = {
+  name: "",
+  description: "",
+  externalUrl: "",
+  image: "",
+  animationUrl: "",
+  youtubeUrl: "",
+  backgroundColor: "",
+  attributes: "",
+  creator: "0x0000000000000000000000000000000000000000",
+  locked: false,
+  price: BigInt(0),
+};
+
 export interface Metadata {
   name: string;
   description: string;
@@ -92,6 +106,13 @@ export interface Metadata {
   price: bigint;            // Price is a uint256, use bigint to handle large numbers
 }
 
+export const EMPTY_LISTING = {
+  price: BigInt(0),
+  expiration: BigInt(0),
+  active: false,
+  creator: "0x0000000000000000000000000000000000000000",
+};
+
 export interface Listing {
   price: bigint;
   expiration: bigint;
@@ -101,44 +122,36 @@ export interface Listing {
 
 // 📄 Minimal External Contract Data Fetching
 export const useGetOwnerOf = (contractAddress: Address, tokenId: number | undefined) => {
-  if (tokenId === undefined) {
-    return { tokenOwner: null, loading: false, error: null };
-  }
   const result = useReadContract({
     abi: minimalERC721ABI,
     address: contractAddress,
-    functionName: "ownerOf",       // ✅ Ensure you call the correct function
-    args: [tokenId],
+    functionName: 'ownerOf',
+    args: tokenId !== undefined ? [tokenId] : [0], // Provide dummy fallback
+    query: {
+      enabled: tokenId !== undefined,
+    },
   });
 
-  const tokenOwner = result.data as
-    Address
-    ;
-
   return {
-    tokenOwner,
+    tokenOwner: tokenId !== undefined ? (result.data as Address) : null,
     loading: result.isLoading,
-    error: result.isError ? "Failed to fetch token owner" : null,
+    error: result.isError ? 'Failed to fetch token owner' : null,
   };
 };
 
 export const useGetTokenUri = (contractAddress: Address, tokenId: number | undefined) => {
-  if (tokenId === undefined) {
-    return { tokenURI: null, loading: false, error: null };
-  }
   const result = useReadContract({
     abi: minimalERC721ABI,
     address: contractAddress,
     functionName: "tokenURI",       // ✅ Ensure you call the correct function
-    args: [tokenId],
+    args: tokenId !== undefined ? [tokenId] : [0],
+    query: {
+      enabled: tokenId !== undefined,
+    },
   });
 
-  const tokenURI = result.data as
-    string
-    ;
-
   return {
-    tokenURI,
+    tokenURI: tokenId !== undefined ? (result.data as string) : "",
     loading: result.isLoading,
     error: result.isError ? "Failed to fetch token uri" : null,
   };
@@ -201,61 +214,39 @@ export const useGetTotalSupply = (contractAddress: Address) => {
 
 // ✅ Custom hook for fetching metadata
 export const useFetchMetadata = (tokenId: number | undefined) => {
-  if (tokenId === undefined) {
-    return { metadata: {
-      name: "",
-      description: "",
-      externalUrl: "",
-      image: "",
-      animationUrl: "",
-      youtubeUrl: "",
-      backgroundColor: "",
-      attributes: "",       // Empty string for JSON attributes
-      creator: "0x0000000000000000000000000000000000000000",  // Dummy empty address
-      locked: false,
-      price: BigInt(0),
-    }, loading: false, error: null, refetch: async () => null };
-  }
   const result = useReadContract({
     abi: contractABI,
     address: CONTRACT_ADDRESS,
-    functionName: "tokenMetadata",       // ✅ Ensure you call the correct function
-    args: [tokenId],
+    functionName: "tokenMetadata",
+    args: tokenId !== undefined ? [tokenId] : [0], // Dummy fallback tokenId
+    query: {
+      enabled: tokenId !== undefined, // Only run query if tokenId is defined
+    },
   });
 
-  // Explicitly type result.data as a tuple
-  const fullData = result.data as [
-    string,  // name
-    string,  // description
-    string,  // externalUrl
-    string,  // image
-    string,  // animationUrl
-    string,  // youtubeUrl
-    string,  // backgroundColor
-    string,  // attributes
-    string,  // creator
-    boolean, // locked
-    bigint   // price (uint256, convert to BigInt)
-  ];
+  const fullData = result.data as
+    | [
+        string, string, string, string, string,
+        string, string, string, string,
+        boolean, bigint
+      ]
+    | undefined;
 
-  // Handle the metadata conversion manually
-  const metadata: Metadata | null = fullData
+  const metadata = fullData
     ? {
-      name: fullData[0],
-      description: fullData[1],
-      externalUrl: fullData[2],
-      image: fullData[3],
-      animationUrl: fullData[4],
-      youtubeUrl: fullData[5],
-      backgroundColor: fullData[6],
-      attributes: fullData[7],
-      creator: fullData[8] as `0x${string}`, // Ensure it's a valid Ethereum address type
-      locked: fullData[9],
-      price: BigInt(fullData[10].toString()), // Convert the price to bigint
-    }
-    : null;
-
-  //console.log("Fetched Metadata:", fullData);
+        name: fullData[0],
+        description: fullData[1],
+        externalUrl: fullData[2],
+        image: fullData[3],
+        animationUrl: fullData[4],
+        youtubeUrl: fullData[5],
+        backgroundColor: fullData[6],
+        attributes: fullData[7],
+        creator: fullData[8] as `0x${string}`,
+        locked: fullData[9],
+        price: BigInt(fullData[10].toString()),
+      }
+    : EMPTY_METADATA;
 
   return {
     metadata,
@@ -266,45 +257,36 @@ export const useFetchMetadata = (tokenId: number | undefined) => {
 };
 
 export const useFetchMetadataSet = (tokenId: number | undefined) => {
-  if (tokenId === undefined) {
-    return { onChain: false, loading_a: false, error_a: null };
-  }
   const result = useReadContract({
     abi: contractABI,
     address: CONTRACT_ADDRESS,
     functionName: "metadataSet",       // ✅ Ensure you call the correct function
-    args: [tokenId],
+    args: tokenId !== undefined ? [tokenId] : [0],
+    query: {
+      enabled: tokenId !== undefined, // Only run query if tokenId is defined
+    },
   });
 
-  // Explicitly type result.data as a boolean
-  const onChain = result.data as
-    boolean  // flag if metadata is false offChain or true onChain
-    ;
-
   return {
-    onChain,
+    onChain: tokenId !== undefined ? (result.data as boolean) : false,
     loading_a: result.isLoading,
     error_a: result.isError ? "Failed to fetch metadata set" : null,
   };
 };
 
 export const useFetchTokenUri = (tokenId: number | undefined) => {
-  if (tokenId === undefined) {
-    return { tokenURI: null, loading_b: false, error_b: null };
-  }
   const result = useReadContract({
     abi: contractABI,
     address: CONTRACT_ADDRESS,
     functionName: "tokenURI",       // ✅ Ensure you call the correct function
-    args: [tokenId],
+    args: tokenId !== undefined ? [tokenId] : [0],
+    query: {
+      enabled: tokenId !== undefined, // Only run query if tokenId is defined
+    },
   });
 
-  const tokenURI = result.data as
-    string
-    ;
-
   return {
-    tokenURI,
+    tokenURI: tokenId !== undefined ? (result.data as string) : "",
     loading_b: result.isLoading,
     error_b: result.isError ? "Failed to fetch token uri" : null,
   };
@@ -331,23 +313,18 @@ export const useFetchGroupOwner = (groupName: string) => {
 };
 
 export const useFetchIsMinted = (tokenId: number | undefined) => {
-  if (tokenId === undefined) {
-    return { isMinted: false, loading_d: false, error_d: null, refetch: async () => null };
-  }
   const result = useReadContract({
     abi: contractABI,
     address: CONTRACT_ADDRESS,
     functionName: "isMinted",       // ✅ Ensure you call the correct function
-    args: [tokenId],
+    args: tokenId !== undefined ? [tokenId] : [0],
+    query: {
+      enabled: tokenId !== undefined, // Only run query if tokenId is defined
+    },
   });
 
-  // Explicitly type result.data as a boolean
-  const isMinted = result.data as
-    boolean
-    ;
-
   return {
-    isMinted,
+    isMinted: tokenId !== undefined ? (result.data as boolean) : false,
     loading_d: result.isLoading,
     error_d: result.isError ? "Failed to fetch is minted flag" : null,
     refetch: result.refetch,
@@ -380,7 +357,10 @@ export const useFetchListing = (tokenId: number | undefined) => {
     abi: contractABI,
     address: CONTRACT_ADDRESS,
     functionName: "listings",
-    args: [tokenId],
+    args: tokenId !== undefined ? [tokenId] : [0],
+    query: {
+      enabled: tokenId !== undefined, // Only run query if tokenId is defined
+    },
   });
 
   const fullData = result.data as [bigint, bigint, boolean, string] | undefined;
@@ -395,7 +375,7 @@ export const useFetchListing = (tokenId: number | undefined) => {
     : null;
 
   return {
-    listing,
+    listing: tokenId !== undefined ? listing : EMPTY_LISTING,
     loading_f: result.isLoading,
     error_f: result.isError ? "Failed to fetch listing" : null,
     refetch_f: result.refetch,
@@ -410,15 +390,14 @@ export const useFetchTokenOwner = (tokenId: number | undefined) => {
     abi: contractABI,
     address: CONTRACT_ADDRESS,
     functionName: "ownerOf",       // ✅ Ensure you call the correct function
-    args: [tokenId],
+    args: tokenId !== undefined ? [tokenId] : [0],
+    query: {
+      enabled: tokenId !== undefined, // Only run query if tokenId is defined
+    },
   });
 
-  const tokenOwner = result.data as
-    Address
-    ;
-
   return {
-    tokenOwner,
+    tokenOwner: tokenId !== undefined ? (result.data as Address) : "0x0000000000000000000000000000000000000000",
     loading_g: result.isLoading,
     error_g: result.isError ? "Failed to fetch token owner" : null,
   };

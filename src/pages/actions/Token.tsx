@@ -551,7 +551,7 @@ const TokenAction = () => {
                       if (typeof attr !== 'object' || (!attr.trait_type && !attr.value) || (attr.trait_type && typeof attr.trait_type !== 'string')) {
                         return (
                           <p key={index} className={styles.warning}>
-                            Invalid attribute format at index {index}. Expected object with "trait_type" (string) and "value" (string or number).
+                            Invalid attribute format at index {index}. Expected object with &quot;trait_type&quot; (string) and &quot;value&quot; (string or number).
                           </p>
                         );
                       }
